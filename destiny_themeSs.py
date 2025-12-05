@@ -1,0 +1,86 @@
+[
+  {
+    "id": 86,
+    "category": "destiny_theme",
+    "question": "What is the Christian meaning and guidance for Destiny Theme 1?",
+    "answer": "Beloved, 1 carries a pioneer grace—the courage to begin what others only imagine. The Lord whispers, “Be strong and courageous… for the Lord your God is with you” (Joshua 1:9). Lead, but lead low. Start with prayer, write the vision, and take the first obedient step. Invite one wise voice to speak truth into your plans so zeal doesn’t outrun wisdom. Declare: I move first, but never alone—God goes before me.",
+    "label": 86
+  },
+  {
+    "id": 87,
+    "category": "destiny_theme",
+    "question": "What is the Christian meaning and guidance for Destiny Theme 2?",
+    "answer": "2 carries the anointing of the peacemaker—an ezer-kind of help that restores bridges. “Two are better than one… if either falls, one can help the other up” (Ecclesiastes 4:9–10). Keep the peace without losing yourself: set holy boundaries, tell the truth in love, and reconcile without enabling. Your listening is ministry. Declare: I honor God by honoring people; I help without disappearing.",
+    "label": 87
+  },
+  {
+    "id": 88,
+    "category": "destiny_theme",
+    "question": "What is the Christian meaning and guidance for Destiny Theme 3?",
+    "answer": "3 is the psalmist’s banner—joyful expression that lifts hearts toward God. “Sing to the Lord a new song” (Psalm 96:1). Create something small each day—song, sentence, testimony—and use your words to bless, not to bruise (Proverbs 18:21). Let celebration become intercession with melody. Declare: My voice is anointed; I release beauty that heals.",
+    "label": 88
+  },
+  {
+    "id": 89,
+    "category": "destiny_theme",
+    "question": "What is the Christian meaning and guidance for Destiny Theme 4?",
+    "answer": "4 is the builder’s mantle—order, foundations, rootedness. “He is like a tree planted by streams of water” (Psalm 1:3). Choose a simple rule of life: Scripture, prayer, rest, service. Finish what you start; let excellence be worship. God will trust you with more as you steward what you have. Declare: I build on the Rock; what I plant will flourish.",
+    "label": 89
+  },
+  {
+    "id": 90,
+    "category": "destiny_theme",
+    "question": "What is the Christian meaning and guidance for Destiny Theme 5?",
+    "answer": "5 carries holy flexibility—freedom that sets captives free. “It is for freedom that Christ has set us free” (Galatians 5:1). Channel your love of change into mission, not escape. Fast one pleasure weekly to anchor freedom in Christ, not novelty. Travel light and carry good news. Declare: I am free to obey; my change becomes someone else’s breakthrough.",
+    "label": 90
+  },
+  {
+    "id": 91,
+    "category": "destiny_theme",
+    "question": "What is the Christian meaning and guidance for Destiny Theme 6?",
+    "answer": "6 bears the keeper’s heart—nurture, responsibility, covenant care. “Above all these put on love, which binds everything together” (Colossians 3:14). Serve without a savior complex. Guard Sabbath so care flows from overflow, not exhaustion. Lead your household in prayer and practical mercy. Declare: Love is my language; I carry people to Jesus, not to myself.",
+    "label": 91
+  },
+  {
+    "id": 92,
+    "category": "destiny_theme",
+    "question": "What is the Christian meaning and guidance for Destiny Theme 7?",
+    "answer": "7 walks the path of the mystic scholar—wisdom sought in stillness. “If any of you lacks wisdom, let him ask God” (James 1:5). Keep a daily appointment with silence and Scripture; then bring your insight back to community so knowledge matures into love. Declare: God speaks in my stillness; I walk in revealed wisdom.",
+    "label": 92
+  },
+  {
+    "id": 93,
+    "category": "destiny_theme",
+    "question": "What is the Christian meaning and guidance for Destiny Theme 8?",
+    "answer": "8 is stewardship of influence—authority that serves justice and mercy. “It is He who gives you power to get wealth” (Deuteronomy 8:18). Treat resources like a trust, not a trophy: tithe, budget, bless. Be bold in negotiations and tender in generosity; champion the voiceless. Declare: I steward power righteously; increase serves the Kingdom.",
+    "label": 93
+  },
+  {
+    "id": 94,
+    "category": "destiny_theme",
+    "question": "What is the Christian meaning and guidance for Destiny Theme 9?",
+    "answer": "9 carries compassionate finishing—mercy that brings closure and healing. “If you pour yourself out for the hungry… your gloom will be as the noonday” (Isaiah 58:10). Say yes to assignments that mend the broken—and actually close the loops: forgive, follow up, finish. Keep boundaries so compassion can last. Declare: I finish with mercy; healing follows my steps.",
+    "label": 94
+  },
+  {
+    "id": 95,
+    "category": "destiny_theme",
+    "question": "What is the Christian meaning and guidance for Destiny Theme 11?",
+    "answer": "11 is the beacon—prophetic clarity that points to Jesus. “You are the light of the world… let your light shine” (Matthew 5:14–16). Keep your lamp trimmed: purity, prayer, accountability. Write what you see, test it by the Word, and speak truth in love—revelation unto redemption. Declare: I carry light without pride; illumination serves salvation.",
+    "label": 95
+  },
+  {
+    "id": 96,
+    "category": "destiny_theme",
+    "question": "What is the Christian meaning and guidance for Destiny Theme 22?",
+    "answer": "22 is the repairer—master builder for families, ministries, and cities. “You shall be called the repairer of the breach” (Isaiah 58:12). Think in blueprints: vision → phases → teams → timelines. Put prayer at the center and justice on the edges. Start small; scale holy. Declare: By God’s grace I rebuild; what was broken will live again.",
+    "label": 96
+  },
+  {
+    "id": 97,
+    "category": "destiny_theme",
+    "question": "What is the Christian meaning and guidance for Destiny Theme 33?",
+    "answer": "33 is the servant-teacher—Christlike compassion with mature mentorship. “Have this mind among yourselves… [Christ] emptied Himself” (Philippians 2:5–7). Teach from a towel, not a throne (John 13). Make disciples at the table; pair sound doctrine with gentle presence. Suffer well, forgive quickly. Declare: I lead by lowering; love is my authority.",
+    "label": 97
+  }
+]
