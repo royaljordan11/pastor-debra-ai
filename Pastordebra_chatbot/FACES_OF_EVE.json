@@ -1,0 +1,444 @@
+[
+  {
+    "id": 100,
+    "source": "Faces of Eve",
+    "section": "preface",
+    "title": "Illuminated by the Mystic Moon",
+    "moon_phase": "All (cyclical)",
+    "themes": [
+      "womanist_theology",
+      "mysticism",
+      "resilience",
+      "divine_feminine",
+      "cyclical_transformation"
+    ],
+    "quotes": [
+      {
+        "author": "Delores Williams",
+        "quote": "Womanist theology does not romanticize survival; it celebrates the struggle."
+      }
+    ],
+    "summary": "Eve’s story unfolds like the moon’s phases—an ongoing cycle of innocence, awakening, illumination, and renewal. Through womanist theology and spiritual mysticism, the text frames Eve as an archetype of sacred empowerment, resilience, and divine feminine wisdom.",
+    "principles": [
+      "Struggle is sacred and reveals resilient wisdom.",
+      "The feminine bears divine agency and creative power.",
+      "Spiritual growth moves in cycles; revelation is ongoing."
+    ],
+    "scripture": [],
+    "metaphors": [
+      "Moon phases as stages of spiritual growth and revelation"
+    ],
+    "reflection_prompt": "Where are you in your current cycle—hidden, waxing, full, or waning—and what is the Spirit illuminating there?",
+    "affirmation": "I honor the sacred cycles in me; revelation returns like the moon.",
+    "qa": [
+      {
+        "q": "What is the central idea of the Preface?",
+        "a": "Eve’s journey mirrors the moon’s phases and, through a womanist and mystical lens, reveals sacred empowerment and cyclical spiritual transformation."
+      }
+    ],
+    "label": 100
+  },
+  {
+    "id": 101,
+    "source": "Faces of Eve",
+    "section": "chapter_1",
+    "title": "Three Phases of Eve’s Story",
+    "moon_phase": "New Moon – Beginnings, Innocence, Awakening",
+    "themes": [
+      "origin_and_identity",
+      "agency",
+      "divine_intention",
+      "womanist_reframing"
+    ],
+    "quotes": [
+      {
+        "author": "Aristotle",
+        "quote": "Knowing yourself is the beginning of all wisdom."
+      },
+      {
+        "author": "Augustine of Hippo",
+        "quote": "You made us for yourself, O Lord, and our hearts are restless until they rest in you."
+      },
+      {
+        "author": "Phyllis Trible (paraphrase)",
+        "quote": "Eve is the culmination of creation, not an adjunct."
+      },
+      {
+        "author": "Jacquelyn Grant",
+        "quote": "To be fully human, fully woman, is to be created in the image of God."
+      }
+    ],
+    "summary": "At the new moon of creation, Eve emerges as intentional, sacred, and endowed with agency—naming, stewarding, and mothering. The chapter reframes ha-’adam to show Eve as essential to the full image of God, aligning with womanist theology that centers dignity and purpose for marginalized women.",
+    "principles": [
+      "Creation confers sacred identity and agency.",
+      "Self-knowledge honors the Divine Artist.",
+      "Beginnings are holy thresholds guided by faith when light is hidden."
+    ],
+    "scripture": [
+      {
+        "reference": "Genesis (creation narrative, thematic)",
+        "text": "Eve emerges as part of God’s intentional creation with agency to name and steward."
+      }
+    ],
+    "metaphors": [
+      "New moon as hidden yet potent beginnings",
+      "Desert singing praise in Hasidic tale—hope in desolate places"
+    ],
+    "faces_of_eve_principle": "Your creation is intentional and sacred; to know yourself is to honor the One who formed you.",
+    "reflection_prompt": "In your current new-moon season, what boundary or beginning are you being invited to embrace?",
+    "affirmation": "I affirm my unique womanhood power; I embrace the sacred beginnings and call God has placed within me.",
+    "qa": [
+      {
+        "q": "How does Chapter 1 reframe Eve’s identity?",
+        "a": "It presents Eve as intentional, sacred, and active—central to the image of God—rather than secondary or subordinate."
+      },
+      {
+        "q": "What does the new moon symbolize in Chapter 1?",
+        "a": "Hidden beginnings that require faith and signal emerging purpose and identity."
+      }
+    ],
+    "label": 101
+  },
+  {
+    "id": 102,
+    "source": "Faces of Eve",
+    "section": "chapter_2",
+    "title": "Beautiful and Loved",
+    "moon_phase": "Waxing Moon – Growth, Discovery, Empowerment",
+    "themes": [
+      "intrinsic_worth",
+      "spiritual_beauty",
+      "resilience",
+      "mystical_equal_partnership"
+    ],
+    "quotes": [
+      {
+        "author": "Dante Alighieri",
+        "quote": "Beauty awakens the soul to act."
+      },
+      {
+        "author": "1 Peter 3:4 (NIV)",
+        "quote": "Let your adorning be the hidden person of the heart, with the imperishable beauty of a gentle and quiet spirit."
+      }
+    ],
+    "summary": "Under the waxing moon, Eve’s awareness blossoms like the lotus—pure, resilient, and ever-renewing. Beauty is grounded in intrinsic divine worth and spiritual depth. Genesis 2:23 is read as mystical partnership and equality, not subordination.",
+    "principles": [
+      "True beauty flows from intrinsic divine worth.",
+      "Resilience and renewal are marks of sacred identity.",
+      "Partnership reflects mystical equality and balance."
+    ],
+    "scripture": [
+      {
+        "reference": "1 Peter 3:4 (NIV)",
+        "text": "Let your adorning be the hidden person of the heart..."
+      },
+      {
+        "reference": "Genesis 2:23 (NIV)",
+        "text": "Bone of my bones and flesh of my flesh; she shall be called woman..."
+      }
+    ],
+    "metaphors": [
+      "Lotus as self-cleaning resilience, nightly closure and dawn reopening",
+      "Waxing moon as expansion of awareness and empowerment"
+    ],
+    "faces_of_eve_principle": "True beauty emerges from recognizing your intrinsic divine worth, nurtured by spiritual depth and self-love.",
+    "reflection_prompt": "Recall a moment you recognized your intrinsic worth. How did that shift your choices toward purpose?",
+    "affirmation": "I affirm my sacred value; I stand confident in my divine purpose and intrinsic worth.",
+    "qa": [
+      {
+        "q": "Why is the lotus used to describe Eve’s awakening?",
+        "a": "Its purity, resilience, and daily renewal mirror Eve’s growth into divine identity despite adverse conditions."
+      },
+      {
+        "q": "How is Genesis 2:23 interpreted here?",
+        "a": "As mystical equality and partnership—Eve’s beauty revealed in balance, not subordination."
+      }
+    ],
+    "label": 102
+  },
+  {
+    "id": 103,
+    "source": "Faces of Eve",
+    "section": "chapter_4",
+    "title": "Pursued",
+    "moon_phase": "Full Moon – Illumination, Revelation, Confrontation",
+    "themes": [
+      "divine_pursuit",
+      "illumination",
+      "truth_and_freedom",
+      "foundation_and_worth",
+      "womanist_mysticism"
+    ],
+    "quotes": [
+      { "author": "Rumi", "quote": "You are not a drop in the ocean. You are the entire ocean, in a drop." },
+      { "author": "Jeremiah 31:3 (NIV)", "quote": "I have loved you with an everlasting love; I have drawn you with unfailing kindness." }
+    ],
+    "summary": "In the radiance of the full moon, Eve discovers she is divinely pursued—her worth grounded in God’s steadfast love, not human favor. The full moon, linked in Kabbalah to Yesod (foundation), mirrors God’s light to expose fear, reveal strength, and guide the soul into clarified truth.",
+    "principles": [
+      "Divine love pursues and grounds identity.",
+      "Illumination reveals hidden fears and strengths.",
+      "Confronting deception with truth leads to freedom."
+    ],
+    "scripture": [
+      { "reference": "Jeremiah 31:3 (NIV)", "text": "I have loved you with an everlasting love; I have drawn you with unfailing kindness." }
+    ],
+    "metaphors": [
+      "Full moon as mirror of divine light",
+      "Yesod as foundation channeling divine energy into the world",
+      "Harvesting insight under moonlight"
+    ],
+    "faces_of_eve_principle": "Your worth is illuminated by God’s unwavering pursuit; truth sets your path free.",
+    "reflection_prompt": "Identify a time you confronted deceit—external or internal. How did truth guide you toward freedom?",
+    "affirmation": "I affirm my clarity and courage; I confront deception with truths rooted in divine wisdom.",
+    "qa": [
+      {
+        "q": "What does the full moon symbolize in Chapter 4?",
+        "a": "Complete illumination—God’s light exposing fears, revealing strengths, and guiding the soul into truth."
+      },
+      {
+        "q": "How is Kabbalah’s Yesod used here?",
+        "a": "As the foundation that channels divine energy into the material world, rooting Eve’s worth in God’s pursuit."
+      }
+    ],
+    "label": 103
+  },
+  {
+    "id": 104,
+    "source": "Faces of Eve",
+    "section": "chapter_6",
+    "title": "The Temptation to Rule",
+    "moon_phase": "Waning Gibbous Moon – Reflection, Acceptance, Wisdom",
+    "themes": [
+      "power_and_humility",
+      "servant_leadership",
+      "self_examination",
+      "wisdom_through_reflection"
+    ],
+    "quotes": [
+      { "author": "Lord Acton", "quote": "Power tends to corrupt, and absolute power corrupts absolutely." },
+      { "author": "Mark 10:43–44 (NIV)", "quote": "Whoever would be great among you must be your servant, and whoever would be first among you must be slave of all." }
+    ],
+    "summary": "In the reflective light of the waning gibbous moon, Eve wrestles with the lure of dominance. True greatness is reframed as service—power yoked to humility—inviting sober self-examination and acceptance that wisdom grows as we release control.",
+    "principles": [
+      "Unchecked power distorts purpose.",
+      "Greatness is practiced as service.",
+      "Reflection converts ambition into wisdom."
+    ],
+    "scripture": [
+      { "reference": "Mark 10:43–44 (NIV)", "text": "Whoever would be great among you must be your servant..." }
+    ],
+    "metaphors": [
+      "Waning gibbous as a mirror for self-audit",
+      "Yoke of power redirected into service"
+    ],
+    "faces_of_eve_principle": "Authority becomes holy when it is given back to God and expressed as service.",
+    "reflection_prompt": "Where has the desire to control eclipsed your call to serve, and what would release look like?",
+    "affirmation": "I choose servant leadership; I surrender control and grow in wisdom.",
+    "qa": [
+      {
+        "q": "How does Chapter 6 define true greatness?",
+        "a": "As service—leadership expressed through humility rather than dominance."
+      }
+    ],
+    "label": 104
+  },
+  {
+    "id": 105,
+    "source": "Faces of Eve",
+    "section": "chapter_7",
+    "title": "The Temptation to Disrespect",
+    "moon_phase": "Waning Moon – Release, Letting Go, Forgiveness",
+    "themes": [
+      "respect_and_dignity",
+      "forgiveness",
+      "community_healing",
+      "self_honor"
+    ],
+    "quotes": [
+      { "author": "Miguel Angel Ruiz", "quote": "Respect is one of the greatest expressions of love." },
+      { "author": "1 Peter 2:17 (NIV)", "quote": "Show proper respect to everyone, love the family of believers, fear God, honor the emperor." }
+    ],
+    "summary": "As the moon wanes, Eve faces the subtle drift toward disrespect—toward self, others, and divine wisdom. This phase calls for release and forgiveness, restoring dignity and rebuilding community through grace-filled honor.",
+    "principles": [
+      "Respect is love enacted.",
+      "Letting go of contempt heals community.",
+      "Self-honor aligns us with divine wisdom."
+    ],
+    "scripture": [
+      { "reference": "1 Peter 2:17 (NIV)", "text": "Show proper respect to everyone..." }
+    ],
+    "metaphors": [
+      "Waning light as the shedding of contempt",
+      "Respect as a bridge across difference"
+    ],
+    "faces_of_eve_principle": "Honor is the language of love that restores what disrespect fractures.",
+    "reflection_prompt": "Reflect on a moment you extended respect in a challenging situation. What impact did it have?",
+    "affirmation": "I affirm my respect; I honor myself and others, building community through grace and humility.",
+    "qa": [
+      {
+        "q": "What does the waning phase invite in Chapter 7?",
+        "a": "Release and forgiveness that restore dignity to self and community."
+      }
+    ],
+    "label": 105
+  },
+  {
+    "id": 106,
+    "source": "Faces of Eve",
+    "section": "chapter_8",
+    "title": "The Womb of Responsibility",
+    "moon_phase": "Last Quarter Moon – Integration, Responsibility, Reconciliation",
+    "themes": [
+      "mothering_and_calling",
+      "integration",
+      "accountability",
+      "community_stewardship"
+    ],
+    "quotes": [
+      { "author": "Author Unknown", "quote": "To be a mother is to become a living prayer." },
+      { "author": "Jeremiah 1:5 (NIV)", "quote": "Before I formed you in the womb I knew you, before you were born I set you apart." }
+    ],
+    "summary": "At last quarter, Eve enters the womb of responsibility—integrating knowledge and consequence while embracing the sacred work of mothering life, community, and purpose. Responsibility reconciles past choices with a future of faithful stewardship.",
+    "principles": [
+      "Calling matures through accountability.",
+      "Mothering is intercession embodied.",
+      "Integration turns insight into stewardship."
+    ],
+    "scripture": [
+      { "reference": "Jeremiah 1:5 (NIV)", "text": "Before I formed you in the womb I knew you..." }
+    ],
+    "metaphors": [
+      "Last quarter as an integrating chamber",
+      "Womb as a sanctuary of formation and purpose"
+    ],
+    "faces_of_eve_principle": "Responsibility is sacred formation—where calling is carried to term.",
+    "reflection_prompt": "What responsibility is being formed in you now, and how is God inviting you to carry it with prayerful integrity?",
+    "affirmation": "I carry my calling like a living prayer; I steward what God entrusts to me.",
+    "qa": [
+      {
+        "q": "How does Chapter 8 define responsibility?",
+        "a": "As sacred integration—bearing the weight of choices and nurturing community and purpose."
+      }
+    ],
+    "label": 106
+  },
+  {
+    "id": 107,
+    "source": "Faces of Eve",
+    "section": "chapter_9",
+    "title": "The Ministry of Grief",
+    "moon_phase": "Waning Crescent Moon – Lamentation, Tenderness, Surrender",
+    "themes": [
+      "lament_as_ministry",
+      "purification_of_heart",
+      "communal_healing",
+      "justice_and_compassion"
+    ],
+    "quotes": [
+      { "author": "Valerie Kaur", "quote": "Grief is praise, because it is the natural way love honors what it misses." },
+      { "author": "Matthew 5:4 (NIV)", "quote": "Blessed are those who mourn, for they shall be comforted." }
+    ],
+    "summary": "In the final crescent, grief becomes a sacred teacher—honoring love, purifying the heart, and binding community through shared lament. The story of Esaw Garner models grief transformed into ministry, advocacy, and communal hope.",
+    "principles": [
+      "Grief honors the depth of love.",
+      "Sorrow refines trust and redirects hope toward God.",
+      "Shared lament is a rite of communal restoration."
+    ],
+    "scripture": [
+      { "reference": "Matthew 5:4 (NIV)", "text": "Blessed are those who mourn, for they shall be comforted." },
+      { "reference": "Psalm 56:8", "text": "You have kept count of my tossings; put my tears in your bottle." }
+    ],
+    "metaphors": [
+      "Tear as moonlit gem—love’s reflection",
+      "Refining silver as purification through sorrow",
+      "Kaddish as communal memory lifted to God"
+    ],
+    "faces_of_eve_principle": "Grief is a ministry where love prays through tears and communities are healed.",
+    "reflection_prompt": "Reflect on a time when grief drew you closer to God or community. How did surrender open space for divine comfort?",
+    "affirmation": "I affirm my journey through grief; God’s presence shines in my darkest hour, bringing healing and hope.",
+    "qa": [
+      {
+        "q": "What are the three purposes of grief named here?",
+        "a": "Honoring love, purifying the heart, and communal healing through shared lament."
+      }
+    ],
+    "label": 107
+  },
+  {
+    "id": 108,
+    "source": "Faces of Eve",
+    "section": "chapter_final",
+    "title": "The Return to Sacred Ground",
+    "moon_phase": "Dark Moon – Renewal, Revelation, Rest",
+    "themes": [
+      "renewal",
+      "holy_rest",
+      "rebirth",
+      "post_exilic_return"
+    ],
+    "quotes": [
+      { "author": "Leonard Cohen", "quote": "There is a crack in everything, that’s how the light gets in." },
+      { "author": "Revelation 21:5 (NIV)", "quote": "Behold, I make all things new." }
+    ],
+    "summary": "In the dark moon’s holy pause, Eve returns not to Eden but to a newly consecrated ground forged by suffering, wisdom, and rebirth. Rest becomes revelation; silence becomes the womb where God makes all things new.",
+    "principles": [
+      "Rest is revelatory and restorative.",
+      "Newness is born from surrendered silence.",
+      "Sacred ground is forged through trial and transfiguration."
+    ],
+    "scripture": [
+      { "reference": "Revelation 21:5 (NIV)", "text": "Behold, I make all things new." }
+    ],
+    "metaphors": [
+      "Dark moon as womb of renewal",
+      "Cracks as channels for grace-light"
+    ],
+    "faces_of_eve_principle": "In holy rest, God renews the soul and reconstitutes purpose.",
+    "reflection_prompt": "Where are you being invited to return—not to what was, but to what is now sacred because of what you’ve endured?",
+    "affirmation": "I stand on sacred ground—whole, healed, and restored; my journey is holy.",
+    "qa": [
+      {
+        "q": "Why is the dark moon central in the final chapter?",
+        "a": "It symbolizes the pregnant silence before renewal—where God remakes us and our path."
+      }
+    ],
+    "label": 108
+  },
+  {
+    "id": 109,
+    "source": "Faces of Eve",
+    "section": "thematic_conclusion",
+    "title": "Returning to the Sacred Arc",
+    "moon_phase": "Cycle – Birthing, Blossoming, Confronting, Restoring",
+    "themes": [
+      "cyclical_time",
+      "sephirot_refinement",
+      "womanist_resilience",
+      "divine_attributes_inhabited"
+    ],
+    "quotes": [],
+    "summary": "Eve’s lunar journey maps a sacred arc where endings seed beginnings. Kabbalistic refinement across the Sephirot and womanist witness to survival-as-liturgy invite us to cultivate wisdom, mercy, strength, and truth together—rising, again and again, by grace.",
+    "principles": [
+      "Time is cyclical; every end holds a beginning.",
+      "Refinement spans wisdom (Binah), loving-kindness (Chesed), strength (Gevurah), and truth.",
+      "Collective survival and resistance are sacred liturgies."
+    ],
+    "scripture": [
+      { "reference": "Revelation 21:5 (NIV)", "text": "Behold, I make all things new." }
+    ],
+    "metaphors": [
+      "Sacred arc as ever-turning wheel",
+      "Moonlit phases as spiritual curriculum"
+    ],
+    "faces_of_eve_principle": "Your life moves in a sacred arc—born, blooming, confronting, and renewed in God.",
+    "reflection_prompt": "What phase of Eve’s journey echoes most deeply in your story, and how will you carry its wisdom into your next cycle?",
+    "affirmation": "I affirm my place in the sacred arc: I am born, I bloom, I confront, and I am made new.",
+    "qa": [
+      {
+        "q": "How do womanist theology and Jewish mysticism converge here?",
+        "a": "Both honor cyclical formation—resilience and justice alongside divine refinement through the attributes of God."
+      }
+    ],
+    "label": 109
+  }
+]
