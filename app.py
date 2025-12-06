@@ -8102,56 +8102,6 @@ def reload_corpora():
         }
     }), 200
 
-@app.route("/health", methods=["GET"])
-def healthz():
-    try:
-        providers = ort.get_available_providers()
-    except Exception:
-        providers = []
-    gpt_status = "configured" if OPENAI_API_KEY else "missing"
-    # try to read tokenizer model_type if possible
-    model_type = None
-    cfg = MODEL_TOKENIZER_PATH / "config.json"
-    if cfg.exists():
-        try:
-            model_type = json.loads(cfg.read_text(encoding="utf-8")).get("model_type")
-        except Exception:
-            model_type = "unknown"
-    # snapshot spend safely
-    with _gpt_budget_lock:
-        spend = round(_gpt_spend_cents_day.get("cents", 0.0), 2)
-        day = _gpt_spend_cents_day.get("day")
-
-    return jsonify({
-        "status":"ok",
-        "version":APP_VERSION,
-        "base_dir": str(BASE_DIR),
-        "t5_loaded": bool(t5_onnx.ok),
-        "tokenizer_dir": str(MODEL_TOKENIZER_PATH),
-        "tokenizer_model_type": model_type,
-        "onnx_model_path": str(ONNX_MODEL_PATH),
-        "onnx_providers": providers,
-        "gpt_available": bool(OPENAI_API_KEY),
-        "gpt_status": gpt_status,
-        "gpt_model": OPENAI_MODEL if OPENAI_API_KEY else None,
-        "router_thresholds": {
-            "t5_theology": ROUTER_T5_MIN_CONF_FOR_THEOLOGY,
-            "t5_general": ROUTER_T5_MIN_CONF_GENERAL,
-            "gpt_weak_cutoff": 0.35
-        },
-        "gpt_budget": {
-            "day": day,
-            "approx_cents_today": spend,
-            "daily_budget_cents": GPT_DAILY_BUDGET_CENTS
-        },
-        "docs":{
-            "PastorDebra":len(pastor_debra_docs),
-            "Session":len(session_docs),
-            "FacesOfEve":len(faces_docs),
-            "DestinyThemes":len(destiny_docs),
-            "Videos":len(video_docs),
-        }
-    }), 200
 
 @app.errorhandler(Exception)
 def handle_exception(e):
