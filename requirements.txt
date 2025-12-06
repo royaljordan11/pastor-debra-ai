@@ -1,4 +1,5 @@
 flask
+Flask-Cors
 python-dotenv
 transformers
 onnxruntime
