@@ -1,5 +1,4 @@
 # app_min.py
-import os
 from flask import Flask, jsonify
 
 app = Flask(__name__)
@@ -9,7 +8,7 @@ app = Flask(__name__)
 def health():
     return jsonify({"status": "ok"}), 200
 
-# Simple root route so hitting "/" in the browser also works
+# Simple root route so hitting "/" in the browser works
 @app.route("/", methods=["GET"])
 def index():
     return (
@@ -18,7 +17,5 @@ def index():
         "<p>Health: <a href='/health'>/health</a></p>"
     ), 200
 
-if __name__ == "__main__":
-    # ✅ IMPORTANT: bind to Railway's PORT env, fallback to 8080 locally
-    port = int(os.environ.get("PORT", "8080"))
-    app.run(host="0.0.0.0", port=port)
+# ⚠️ IMPORTANT: no `if __name__ == '__main__': app.run(...)` block here.
+# gunicorn will import `app_min:app` and run it itself.
