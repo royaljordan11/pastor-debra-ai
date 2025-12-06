@@ -1,16 +1,23 @@
-import os
+# app_min.py
 from flask import Flask, jsonify
 
 app = Flask(__name__)
 
-@app.route("/", methods=["GET"])
-def index():
-    return "Pastor Debra AI minimal backend is running.", 200
-
+# Simple health check
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok"}), 200
 
+# Simple root route so hitting "/" in the browser also works
+@app.route("/", methods=["GET"])
+def index():
+    return (
+        "<h1>Pastor Debra AI — Minimal</h1>"
+        "<p>If you see this page, the backend is up.</p>"
+        "<p>Health: <a href=\"/health\">/health</a></p>"
+    ), 200
+
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", "8080"))
-    app.run(host="0.0.0.0", port=port)
+    # Railway is configured to use port 8080
+    app.run(host="0.0.0.0", port=8080)
