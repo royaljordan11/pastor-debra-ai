@@ -40,6 +40,12 @@ from rapidfuzz import fuzz
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+try:
+    import torch
+except ImportError:
+    torch = None
+
+
 # ────────── Small helpers ──────────
 def _get_bool(env_key: str, default: bool) -> bool:
     v = os.getenv(env_key)
