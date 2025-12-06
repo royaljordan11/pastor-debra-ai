@@ -6,3 +6,4 @@ onnxruntime
 numpy
 requests
 rapidfuzz
+scikit-learn
