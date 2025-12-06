@@ -149,7 +149,7 @@ app.config.update(JSON_SORT_KEYS=False, JSONIFY_PRETTYPRINT_REGULAR=False)
 CORS(app, resources={r"/*": CORS_CONFIG})
 
 @app.route("/health")
-def health():
+def healthz():
     return jsonify({"status": "ok", "version": APP_VERSION}), 200
 
 @app.route("/")
@@ -8102,7 +8102,7 @@ def reload_corpora():
     }), 200
 
 @app.route("/health", methods=["GET"])
-def health():
+def healthz():
     try:
         providers = ort.get_available_providers()
     except Exception:
