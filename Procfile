@@ -1,1 +1,1 @@
-web: python app_min.py
+web: gunicorn -b 0.0.0.0:$PORT app_min:app
