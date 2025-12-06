@@ -4851,7 +4851,7 @@ def choose_model(user_text: str, hits: List[Hit], t5_ok: bool) -> str:
     logger.warning("Router: default fallback to FAQ")
     return "faq_fallback"
 
-# ────────── T5 ONNX wrapper (hardened) ──────────
+# ────────── T5 ONNX wrapper (optional / safe) ──────────
 class T5ONNX:
     def __init__(self, model_path: Path, tok_path: Path):
         self.ok = False
@@ -4860,40 +4860,59 @@ class T5ONNX:
         self.model_path = Path(model_path)
         self.tok_path = Path(tok_path)
 
-        try:
-            # Validate tokenizer folder and model_type
-            cfg_path = self.tok_path / "config.json"
-            if cfg_path.exists():
-                try:
-                    cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
-                    mt = str(cfg.get("model_type", "")).lower()
-                    if mt != "t5":
-                        raise RuntimeError(
-                            f"Tokenizer at {self.tok_path} is '{mt}', expected 't5'. "
-                            f"Point MODEL_TOKENIZER_PATH to your T5 tokenizer directory."
-                        )
-                except Exception as e:
-                    logger.warning("Could not read tokenizer config.json: %s", e)
+        # If model/tokenizer dirs are missing in this environment (Railway),
+        # DO NOT try to talk to Hugging Face. Just log + stay in GPT-only mode.
+        if not self.model_path.exists() or not self.tok_path.exists():
+            logger.warning(
+                "T5 ONNX: model or tokenizer dir missing (%s, %s); "
+                "running in GPT-only mode.",
+                self.model_path,
+                self.tok_path,
+            )
+            return
 
-            # Try fast tokenizer first; fall back to slow if tokenizer.json is corrupt/missing
+        try:
+            from transformers import AutoTokenizer
+            import onnxruntime as ort
+
+            # Local-only load; never treat this as a HF repo id
             try:
-                self.tokenizer = AutoTokenizer.from_pretrained(str(self.tok_path), use_fast=True)
+                self.tokenizer = AutoTokenizer.from_pretrained(
+                    str(self.tok_path),
+                    local_files_only=True,
+                    use_fast=True,
+                )
             except Exception as e_fast:
-                logger.warning("Fast tokenizer failed (%s). Falling back to use_fast=False", e_fast)
-                self.tokenizer = AutoTokenizer.from_pretrained(str(self.tok_path), use_fast=False)
+                logger.warning(
+                    "T5 ONNX: fast tokenizer failed (%s). Falling back to use_fast=False",
+                    e_fast,
+                )
+                self.tokenizer = AutoTokenizer.from_pretrained(
+                    str(self.tok_path),
+                    local_files_only=True,
+                    use_fast=False,
+                )
 
             # Ensure pad token is set
             if self.tokenizer.pad_token_id is None and self.tokenizer.eos_token_id is not None:
                 self.tokenizer.pad_token = self.tokenizer.eos_token
 
-            # ONNX providers
             providers = [p for p in ort.get_available_providers() if p] or ["CPUExecutionProvider"]
             self.session = ort.InferenceSession(str(self.model_path), providers=providers)
             self.ok = True
-            logger.info("T5 ONNX loaded | providers=%s | tok=%s", providers, self.tok_path)
+            logger.info(
+                "T5 ONNX loaded from %s | providers=%s | tok=%s",
+                self.model_path,
+                providers,
+                self.tok_path,
+            )
 
         except Exception as e:
-            logger.exception(f"T5 ONNX init failed: {e}")
+            # IMPORTANT: don't crash the app here, just log and leave ok=False
+            logger.error("T5 ONNX init failed: %s – continuing in GPT-only mode.", e)
+            self.session = None
+            self.tokenizer = None
+            self.ok = False
 
     def _pick_logits(self, outputs: List[np.ndarray]) -> np.ndarray:
         for out in reversed(outputs):
