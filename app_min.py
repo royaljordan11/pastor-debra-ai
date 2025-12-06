@@ -1,4 +1,5 @@
 # app_min.py
+import os
 from flask import Flask, jsonify
 
 app = Flask(__name__)
@@ -14,10 +15,10 @@ def index():
     return (
         "<h1>Pastor Debra AI — Minimal</h1>"
         "<p>If you see this page, the backend is up.</p>"
-        "<p>Health: <a href=\"/health\">/health</a></p>"
+        "<p>Health: <a href='/health'>/health</a></p>"
     ), 200
 
-
 if __name__ == "__main__":
-    # Railway is configured to use port 8080
-    app.run(host="0.0.0.0", port=8080)
+    # ✅ IMPORTANT: bind to Railway's PORT env, fallback to 8080 locally
+    port = int(os.environ.get("PORT", "8080"))
+    app.run(host="0.0.0.0", port=port)
