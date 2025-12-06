@@ -8079,17 +8079,6 @@ def debug_search():
         } for h in hits]
     }), 200
 
-# ------------------- Basic health + root -------------------
-@app.route("/", methods=["GET"])
-def index():
-    return "Pastor Debra AI backend is running", 200
-
-@app.route("/health", methods=["GET"])
-def health():
-    # Keep this ultra simple so we know it can't crash
-    return "OK", 200
-
-
 
 @app.route("/reload", methods=["POST"])
 def reload_corpora():
@@ -8112,7 +8101,21 @@ def handle_exception(e):
     logger.exception("Unhandled error: %s", e)
     return jsonify({"error": str(e)}), 500
 
+# ---------- Minimal health + root for Railway ----------
+
+@app.route("/", methods=["GET"])
+def index():
+    # Minimal root – no heavy logic
+    return "Pastor Debra AI backend is running.", 200
+
+@app.route("/health", methods=["GET"])
+def health():
+    # This is what Railway is hitting for its check
+    logger.info("Health endpoint HIT")
+    return jsonify({"status": "ok"}), 200
+
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", "8080"))
+    port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
 
