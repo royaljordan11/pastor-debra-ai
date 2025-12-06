@@ -149,7 +149,7 @@ app.config.update(JSON_SORT_KEYS=False, JSONIFY_PRETTYPRINT_REGULAR=False)
 CORS(app, resources={r"/*": CORS_CONFIG})
 
 @app.route("/health")
-def healthz():
+def health():
     return jsonify({"status": "ok", "version": APP_VERSION}), 200
 
 @app.route("/")
