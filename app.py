@@ -148,10 +148,6 @@ app = Flask(__name__, static_folder=str(BASE_DIR), static_url_path="")
 app.config.update(JSON_SORT_KEYS=False, JSONIFY_PRETTYPRINT_REGULAR=False)
 CORS(app, resources={r"/*": CORS_CONFIG})
 
-@app.route("/health", methods=["GET"])
-def health():
-    return jsonify({"status": "ok"}), 200
-
 
 @app.route("/")
 def root():
@@ -162,10 +158,16 @@ def root():
     }), 200
 
 
-@app.route("/")
+# ------------------- Basic health + root -------------------
+@app.route("/", methods=["GET"])
 def index():
-    # Serve the static HTML shell
-    return send_from_directory(str(BASE_DIR), "Pastor.html")
+    return "Pastor Debra AI backend is running", 200
+
+@app.route("/health", methods=["GET"])
+def health():
+    # Keep this ultra simple so we know it can't crash
+    return "OK", 200
+
 
 # Prefer MP4 for inline playback; keep .mov as a fallback
 @app.route("/mom.mp4")
