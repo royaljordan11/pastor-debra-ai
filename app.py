@@ -158,16 +158,6 @@ def root():
     }), 200
 
 
-# ------------------- Basic health + root -------------------
-@app.route("/", methods=["GET"])
-def index():
-    return "Pastor Debra AI backend is running", 200
-
-@app.route("/health", methods=["GET"])
-def health():
-    # Keep this ultra simple so we know it can't crash
-    return "OK", 200
-
 
 # Prefer MP4 for inline playback; keep .mov as a fallback
 @app.route("/mom.mp4")
@@ -8088,6 +8078,18 @@ def debug_search():
             "preview": re.sub(r"\s+", " ", (h.meta.get("summary") or h.meta.get("answer") or h.meta.get("faces_of_eve_principle") or ""))[:240]
         } for h in hits]
     }), 200
+
+# ------------------- Basic health + root -------------------
+@app.route("/", methods=["GET"])
+def index():
+    return "Pastor Debra AI backend is running", 200
+
+@app.route("/health", methods=["GET"])
+def health():
+    # Keep this ultra simple so we know it can't crash
+    return "OK", 200
+
+
 
 @app.route("/reload", methods=["POST"])
 def reload_corpora():
