@@ -8,7 +8,7 @@ app = Flask(__name__)
 def health():
     return jsonify({"status": "ok"}), 200
 
-# Simple root route so hitting "/" in the browser works
+# Simple root route so hitting "/" in the browser also works
 @app.route("/", methods=["GET"])
 def index():
     return (
@@ -17,5 +17,5 @@ def index():
         "<p>Health: <a href='/health'>/health</a></p>"
     ), 200
 
-# ⚠️ IMPORTANT: no `if __name__ == '__main__': app.run(...)` block here.
-# gunicorn will import `app_min:app` and run it itself.
+# IMPORTANT: no "if __name__ == '__main__': app.run(...)" block here.
+# Gunicorn will import app_min:app and run it itself.
