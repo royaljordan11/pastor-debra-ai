@@ -1,2 +1,12 @@
 Flask==2.3.2
 gunicorn==21.2.0
+
+numpy
+requests
+flask-cors
+transformers
+onnxruntime
+rapidfuzz
+scikit-learn
+python-dotenv
+openai
