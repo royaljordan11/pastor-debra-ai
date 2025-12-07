@@ -152,6 +152,11 @@ app = Flask(__name__, static_folder=str(BASE_DIR), static_url_path="")
 app.config.update(JSON_SORT_KEYS=False, JSONIFY_PRETTYPRINT_REGULAR=False)
 CORS(app, resources={r"/*": CORS_CONFIG})
 
+@app.route("/")
+def index():
+    # Serve the main HTML shell
+    return send_from_directory(str(BASE_DIR), "Pastor.html")
+
 
 @app.route("/")
 def root():
@@ -8113,8 +8118,4 @@ def health():
     return jsonify({"status": "ok"}), 200
 
 
-@app.route("/")
-def index():
-    # Serve the main HTML shell
-    return send_from_directory(str(BASE_DIR), "Pastor.html")
 
