@@ -8,11 +8,6 @@ app = Flask(__name__)
 def health():
     return jsonify({"status": "ok"}), 200
 
-# Root route
-@app.route("/", methods=["GET"])
+@app.route("/")
 def index():
-    return (
-        "<h1>Pastor Debra AI — Minimal</h1>"
-        "<p>If you see this page, the backend is up.</p>"
-        "<p>Health: <a href=\"/health\">/health</a></p>"
-    ), 200
+    return "Pastor Debra AI is running on Railway ✅"
