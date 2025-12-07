@@ -1,5 +1,7 @@
 # app_min.py
 from flask import Flask, jsonify
+from flask import render_template
+
 
 app = Flask(__name__)
 
@@ -8,6 +10,8 @@ app = Flask(__name__)
 def health():
     return jsonify({"status": "ok"}), 200
 
+from flask import render_template
+
 @app.route("/")
 def index():
-    return "Pastor Debra AI is running on Railway ✅"
+    return render_template("Pastor.html")
