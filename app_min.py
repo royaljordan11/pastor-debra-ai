@@ -32,6 +32,7 @@ import random
 
 from pathlib import Path
 from flask import Flask, request, jsonify, send_from_directory
+from flask import render_template
 from flask_cors import CORS
 from transformers import AutoTokenizer
 import onnxruntime as ort
@@ -8111,8 +8112,9 @@ def handle_exception(e):
 def health():
     return jsonify({"status": "ok"}), 200
 
-from flask import render_template
 
 @app.route("/")
 def index():
-    return render_template("Pastor.html")
+    # Serve the main HTML shell
+    return send_from_directory(str(BASE_DIR), "Pastor.html")
+
