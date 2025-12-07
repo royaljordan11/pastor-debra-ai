@@ -1,1 +1,1 @@
-web: python app_min.py
+web: gunicorn app_min:app
