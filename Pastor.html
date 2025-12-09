@@ -306,6 +306,8 @@ function showLocalVideo(src){
   const v = qs('#playerVideo');
   const f = qs('#playerIframe');
 
+  if (!v) return;
+
   try { v.pause(); } catch (e) {}
   v.innerHTML = '';
 
@@ -321,8 +323,10 @@ function showLocalVideo(src){
   v.appendChild(s);
 
   v.style.display = 'block';
-  f.style.display = 'none';
-  f.src = '';
+  if (f) {
+    f.style.display = 'none';
+    f.src = '';
+  }
 
   v.load();
   v.play().catch(() => {});
@@ -332,9 +336,13 @@ function showYouTube(id, autoplay = false){
   const v = qs('#playerVideo');
   const f = qs('#playerIframe');
 
-  try { v.pause(); } catch (e) {}
-  v.style.display = 'none';
-  v.innerHTML = '';
+  if (!f) return; // if iframe not found, bail out
+
+  if (v) {
+    try { v.pause(); } catch (e) {}
+    v.style.display = 'none';
+    v.innerHTML = '';
+  }
 
   f.style.display = 'block';
 
@@ -352,6 +360,8 @@ function showYouTube(id, autoplay = false){
 
 function renderVideos(list){
   const wrap = qs('#videosList');
+  if (!wrap) return;
+
   wrap.innerHTML = '';
 
   list.forEach(v => {
@@ -376,7 +386,7 @@ function renderVideos(list){
     el.addEventListener('click', () => {
       const vidId = v.yt_id || ytIdFromUrl(v.url || '');
       if (vidId) {
-        // user clicked – we don't need to force autoplay params
+        // user clicked – no need to force autoplay params
         showYouTube(vidId, false);
       } else if (v.url && (v.url.endsWith('.mp4') || v.url.endsWith('.mov'))) {
         showLocalVideo(v.url);
@@ -453,10 +463,12 @@ async function loadVideos(){
 }
 
 // Make sure videos load when the page first starts up
-window.addEventListener('DOMContentLoaded', () => {
-  loadVideos().catch(() => {});
+window.addEventListener('load', () => {
+  // small delay to make sure DOM + layout are stable
+  setTimeout(() => {
+    loadVideos().catch(() => {});
+  }, 300);
 });
-
 
 
 /* ---------- Chat + Cites ---------- */
