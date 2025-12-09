@@ -1,4 +1,3 @@
-
 """
 Pastor Debra Chatbot Backend (Flask) — Hybrid (T5/ONNX + GPT)
 Hardened: .env loading, videos.json auto-stub, T5 tokenizer sanity checks + fast→slow fallback.
@@ -15,34 +14,32 @@ Endpoints
 - POST /chat          -> main chat (router: T5 or GPT or forced)
 """
 
-import os, re, json, logging, time, hashlib, threading, datetime
+import os, re, json, logging, time, hashlib, threading, datetime, random
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from typing import List, Dict, Any, Tuple, Optional
+from pathlib import Path
+from datetime import datetime, timezone
 
 import numpy as np
 import requests
-from flask import Flask, request, jsonify, session, Response
-import hashlib
-import time
-from datetime import datetime, timezone
-import random
-
-
-
-from pathlib import Path
-from flask import Flask, request, jsonify, send_from_directory
-from flask import render_template
-from flask_cors import CORS
-from transformers import AutoTokenizer
+import zipfile
 import onnxruntime as ort
+from transformers import AutoTokenizer
+
+from flask import (
+    Flask,
+    request,
+    jsonify,
+    session,
+    Response,
+    send_from_directory,
+)
+from flask_cors import CORS
 
 from rapidfuzz import fuzz
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-
-from flask import Flask, jsonify
-from flask import render_template
 
 try:
     import torch
@@ -53,8 +50,10 @@ except ImportError:
 # ────────── Small helpers ──────────
 def _get_bool(env_key: str, default: bool) -> bool:
     v = os.getenv(env_key)
-    if v is None: return default
+    if v is None:
+        return default
     return str(v).strip().lower() in {"1", "true", "yes", "y", "on"}
+
 
 def _get_int(env_key: str, default: int) -> int:
     try:
@@ -62,11 +61,13 @@ def _get_int(env_key: str, default: int) -> int:
     except Exception:
         return default
 
+
 def _get_float(env_key: str, default: float) -> float:
     try:
         return float(os.getenv(env_key, str(default)))
     except Exception:
         return default
+
 
 # ────────── Env & Config ──────────
 try:
@@ -103,6 +104,7 @@ RATE_MAX_HITS   = _get_int("RATE_MAX_HITS", 12)
 _RATE = defaultdict(lambda: deque(maxlen=20))
 _rate_lock = threading.Lock()
 
+
 def _throttle(ip: str) -> bool:
     now = time.time()
     with _rate_lock:
@@ -115,67 +117,151 @@ def _throttle(ip: str) -> bool:
         return False
 
 
-# Paths (robust)
-BASE_DIR = Path(os.getenv("PASTOR_DEBRA_BASE_DIR", Path(__file__).resolve().parent)).resolve()
-
-# ONNX model lives in ./onnx/model.onnx
-ONNX_DIR = BASE_DIR / "onnx"
-ONNX_DIR.mkdir(parents=True, exist_ok=True)
-ONNX_MODEL_PATH = ONNX_DIR / "model.onnx"
-
-MODEL_TOKENIZER_PATH = BASE_DIR / "tokenizer"   # folder with tokenizer files
-
-
-# Hugging Face tokenizer + config live in ./tokenizer
-TOKENIZER_DIR = BASE_DIR / "tokenizer"
-
-PASTOR_DEBRA_JSON = BASE_DIR / "PASTOR_DEBRA.json"
-SESSION_PASTOR_DEBRA_JSON = BASE_DIR / "SESSION_PASTOR_DEBRA.json"
-FACES_OF_EVE_JSON = BASE_DIR / "FACES_OF_EVE.json"
-DESTINY_THEMES_JSON = BASE_DIR / "destiny_themes.json"
-VIDEOS_JSON = BASE_DIR / "videos.json"
-DESTINY_JSON_PATH = os.path.join(BASE_DIR, "destiny_themes.json")
-
-# Scripture settings
-SCRIPTURE_TRANSLATION = os.getenv("SCRIPTURE_TRANSLATION", "web")  # web, kjv, asv...
-SCRIPTURE_API_BASE    = os.getenv("SCRIPTURE_API_BASE", "https://bible-api.com")
-SCRIPTURE_CACHE_PATH  = BASE_DIR / "scripture_cache.json"
-
 # ────────── Logging ──────────
 logging.basicConfig(
     level=logging.DEBUG if DEBUG_MODE else logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s :: %(message)s"
+    format="%(asctime)s %(levelname)s %(name)s :: %(message)s",
 )
 logger = logging.getLogger("pastor-debra-hybrid")
 
 if not OPENAI_API_KEY:
     logger.warning("OPENAI_API_KEY not set — GPT disabled.")
 else:
-    logger.info(f"GPT configured | MODEL={OPENAI_MODEL} ALT={OPENAI_MODEL_ALT} BASE={OPENAI_BASE_URL}")
+    logger.info(
+        "GPT configured | MODEL=%s ALT=%s BASE=%s",
+        OPENAI_MODEL,
+        OPENAI_MODEL_ALT,
+        OPENAI_BASE_URL,
+    )
+
+
+# ────────── Paths (robust) ──────────
+BASE_DIR = Path(os.getenv("PASTOR_DEBRA_BASE_DIR", Path(__file__).resolve().parent)).resolve()
+
+# ONNX model directory; on Railway we mount the volume at /app/onnx
+ONNX_DIR = BASE_DIR / "onnx"
+ONNX_DIR.mkdir(parents=True, exist_ok=True)
+
+# Allow override via env (but default to /app/onnx/model.onnx)
+ONNX_MODEL_PATH = Path(
+    os.getenv("ONNX_MODEL_PATH", str(ONNX_DIR / "model.onnx"))
+).resolve()
+
+# Hugging Face tokenizer lives in ./tokenizer
+TOKENIZER_DIR = BASE_DIR / "tokenizer"
+TOKENIZER_DIR.mkdir(parents=True, exist_ok=True)
+
+# Kept for backward compatibility if referenced elsewhere
+MODEL_TOKENIZER_PATH = TOKENIZER_DIR
+
+PASTOR_DEBRA_JSON          = BASE_DIR / "PASTOR_DEBRA.json"
+SESSION_PASTOR_DEBRA_JSON  = BASE_DIR / "SESSION_PASTOR_DEBRA.json"
+FACES_OF_EVE_JSON          = BASE_DIR / "FACES_OF_EVE.json"
+DESTINY_THEMES_JSON        = BASE_DIR / "destiny_themes.json"
+VIDEOS_JSON                = BASE_DIR / "videos.json"
+DESTINY_JSON_PATH          = str(DESTINY_THEMES_JSON)
+
+# Scripture settings
+SCRIPTURE_TRANSLATION = os.getenv("SCRIPTURE_TRANSLATION", "web")  # web, kjv, asv...
+SCRIPTURE_API_BASE    = os.getenv("SCRIPTURE_API_BASE", "https://bible-api.com")
+SCRIPTURE_CACHE_PATH  = BASE_DIR / "scripture_cache.json"
+
+
+# ────────── Remote zip download helpers (Google Drive) ──────────
+# Expects env vars:
+#   TOKENIZER_ZIP_URL = https://drive.google.com/uc?export=download&id=17verVsIDPO93Utgj3EaM17WzB6q27nUj
+#   ONNX_ZIP_URL      = https://drive.google.com/uc?export=download&id=1JVD6uqwDiR3mkz4AZudF4VViKUliL_5N
+# Files are downloaded once on first boot and then reused.
+
+def _download_zip_to_dir(url: str, dest_dir: Path, label: str) -> None:
+    """
+    Download a zip from `url` and extract it into `dest_dir`.
+    Safe to call multiple times; it will overwrite existing files.
+    """
+    if not url:
+        logger.warning("%s_ZIP_URL not set; skipping download.", label)
+        return
+
+    try:
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        tmp_zip = dest_dir.parent / f"{label.lower()}_download.zip"
+        logger.info("Downloading %s zip from %s ...", label, url)
+
+        with requests.get(url, stream=True, timeout=600) as r:
+            r.raise_for_status()
+            with open(tmp_zip, "wb") as f:
+                for chunk in r.iter_content(chunk_size=1024 * 1024):
+                    if chunk:
+                        f.write(chunk)
+
+        logger.info(
+            "Download finished: %s (size=%s bytes)",
+            tmp_zip,
+            tmp_zip.stat().st_size,
+        )
+
+        with zipfile.ZipFile(tmp_zip, "r") as z:
+            z.extractall(dest_dir)
+        logger.info("%s zip extracted into %s", label, dest_dir)
+
+        try:
+            tmp_zip.unlink()
+        except Exception:
+            pass
+
+    except Exception as e:
+        logger.warning("Failed to download/extract %s zip: %s", label, e)
+
+
+def ensure_onnx_from_zip() -> None:
+    """
+    Ensure ONNX_MODEL_PATH exists.
+    If missing, download ONNX_ZIP_URL and extract into ONNX_DIR.
+    """
+    if ONNX_MODEL_PATH.exists():
+        return
+
+    url = os.getenv("ONNX_ZIP_URL", "")
+    _download_zip_to_dir(url, ONNX_DIR, "ONNX")
+
+    if not ONNX_MODEL_PATH.exists():
+        # Try to guess the ONNX file inside the extracted folder
+        candidates = list(ONNX_DIR.rglob("*.onnx"))
+        if len(candidates) == 1:
+            logger.info("Renaming ONNX candidate %s -> %s", candidates[0], ONNX_MODEL_PATH)
+            try:
+                candidates[0].rename(ONNX_MODEL_PATH)
+            except Exception as e:
+                logger.warning("Failed to rename ONNX candidate: %s", e)
+        elif candidates:
+            logger.warning(
+                "Multiple ONNX candidates found in %s; please ensure model.onnx is present.",
+                ONNX_DIR,
+            )
+
+
+def ensure_tokenizer_from_zip() -> None:
+    """
+    Ensure TOKENIZER_DIR contains a valid GPT-2 tokenizer.
+    If missing/empty, download TOKENIZER_ZIP_URL and extract into TOKENIZER_DIR.
+    """
+    if TOKENIZER_DIR.exists() and any(TOKENIZER_DIR.iterdir()):
+        return
+
+    url = os.getenv("TOKENIZER_ZIP_URL", "")
+    _download_zip_to_dir(url, TOKENIZER_DIR, "TOKENIZER")
+
 
 # ────────── ONNX + Tokenizer Init ──────────
-TOKENIZER = None
-ONNX_SESSION = None
+TOKENIZER: Optional[AutoTokenizer] = None
+ONNX_SESSION: Optional[onnxruntime.InferenceSession] = None  # type: ignore[name-defined]
 
-# 1) Tokenizer (force slow GPT-2, same as what worked locally)
-try:
-    TOKENIZER = AutoTokenizer.from_pretrained(
-        str(TOKENIZER_DIR),
-        local_files_only=True,
-        use_fast=False,          # important: use slow tokenizer
-    )
-    vocab_size = getattr(TOKENIZER, "vocab_size", "n/a")
-    logger.info(
-        "Tokenizer loaded from %s (vocab size=%s)",
-        TOKENIZER_DIR,
-        vocab_size,
-    )
-except Exception as e:
-    TOKENIZER = None
-    logger.warning("Failed to load tokenizer from %s: %s", TOKENIZER_DIR, e)
 
-# 2) ONNX session
+# 1) ONNX session (with optional remote download)
 try:
+    if not ONNX_MODEL_PATH.exists():
+        ensure_onnx_from_zip()
+
     if ONNX_MODEL_PATH.exists():
         ONNX_SESSION = ort.InferenceSession(
             str(ONNX_MODEL_PATH),
@@ -188,10 +274,46 @@ try:
             onnx_inputs,
         )
     else:
+        ONNX_SESSION = None
         logger.warning("ONNX model not found at %s", ONNX_MODEL_PATH)
 except Exception as e:
     ONNX_SESSION = None
     logger.warning("Failed to initialize ONNX session: %s", e)
+
+
+def _maybe_init_tokenizer() -> None:
+    """
+    Ensure TOKENIZER is available.
+    If initial load failed (e.g., on Railway with no files),
+    try downloading the tokenizer zip and loading again.
+    """
+    global TOKENIZER
+    if TOKENIZER is not None:
+        return
+
+    ensure_tokenizer_from_zip()
+    if not TOKENIZER_DIR.exists():
+        logger.warning("TOKENIZER_DIR %s still missing after download.", TOKENIZER_DIR)
+        return
+
+    try:
+        TOKENIZER = AutoTokenizer.from_pretrained(
+            str(TOKENIZER_DIR),
+            local_files_only=True,
+            use_fast=False,  # use the slow GPT-2 tokenizer
+        )
+        logger.info(
+            "Tokenizer initialized from %s (vocab size=%s)",
+            TOKENIZER_DIR,
+            getattr(TOKENIZER, "vocab_size", "n/a"),
+        )
+    except Exception as e:
+        logger.warning("Tokenizer still unavailable after download: %s", e)
+
+
+# Initialize tokenizer (local: already present; Railway: triggers download)
+_maybe_init_tokenizer()
+
 
 # ────────── Flask ──────────
 app = Flask(__name__, static_folder=str(BASE_DIR), static_url_path="")
@@ -199,32 +321,33 @@ app = Flask(__name__, static_folder=str(BASE_DIR), static_url_path="")
 app.config.update(JSON_SORT_KEYS=False, JSONIFY_PRETTYPRINT_REGULAR=False)
 CORS(app, resources={r"/*": CORS_CONFIG})
 
+
 @app.route("/")
 def index():
     # Serve the main HTML shell
     return send_from_directory(str(BASE_DIR), "Pastor.html")
 
 
-
-
 # Prefer MP4 for inline playback; keep .mov as a fallback
 @app.route("/mom.mp4")
 def serve_mom_mp4():
     return send_from_directory(
-        str(BASE_DIR), "mom.mp4",
+        str(BASE_DIR),
+        "mom.mp4",
         mimetype="video/mp4",
         as_attachment=False,
-        conditional=True
+        conditional=True,
     )
 
 
 @app.route("/mom.mov")
 def serve_mom_mov():
     return send_from_directory(
-        str(BASE_DIR), "mom.mov",
+        str(BASE_DIR),
+        "mom.mov",
         mimetype="video/quicktime",
         as_attachment=False,
-        conditional=True
+        conditional=True,
     )
 
 
@@ -238,11 +361,13 @@ def _load_destiny_json(path: str):
         print("Warning: could not load destiny_themes.json:", e)
     return []
 
+
 # Only define if not defined elsewhere
 try:
-    destiny_themes  # type: ignore
+    destiny_themes  # type: ignore[name-defined]
 except NameError:
     destiny_themes = _load_destiny_json(DESTINY_JSON_PATH)
+
 
 # ====== Build quick lookup ======
 destiny_map = {}
