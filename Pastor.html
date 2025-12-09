@@ -295,42 +295,87 @@ function toast(msg){ const t=qs('#toast'); t.textContent=msg; t.classList.add('s
 function ytIdFromUrl(url){
   if(!url) return null;
   try{
-    const u=new URL(url);
-    if(u.hostname.includes('youtu.be')) return u.pathname.slice(1);
-    if(u.hostname.includes('youtube.com')) return u.searchParams.get('v');
-  }catch(e){}
+    const u = new URL(url);
+    if (u.hostname.includes('youtu.be')) return u.pathname.slice(1);
+    if (u.hostname.includes('youtube.com')) return u.searchParams.get('v');
+  } catch(e){}
   return null;
 }
+
 function showLocalVideo(src){
-  const v = qs('#playerVideo'); const f = qs('#playerIframe');
-  try{ v.pause(); }catch(e){}
-  v.innerHTML='';
-  const type = src.endsWith('.mp4') ? 'video/mp4' : src.endsWith('.mov') ? 'video/quicktime' : '';
-  const s = document.createElement('source'); s.src = src; if(type) s.type=type; v.appendChild(s);
-  v.style.display='block'; f.style.display='none'; f.src='';
-  v.load(); v.play().catch(()=>{});
+  const v = qs('#playerVideo');
+  const f = qs('#playerIframe');
+  try { v.pause(); } catch(e){}
+  v.innerHTML = '';
+
+  const type = src.endsWith('.mp4')
+    ? 'video/mp4'
+    : src.endsWith('.mov')
+    ? 'video/quicktime'
+    : '';
+
+  const s = document.createElement('source');
+  s.src = src;
+  if (type) s.type = type;
+  v.appendChild(s);
+
+  v.style.display = 'block';
+  f.style.display = 'none';
+  f.src = '';
+
+  v.load();
+  v.play().catch(()=>{});
 }
-function showYouTube(id){
-  const v=qs('#playerVideo'); const f=qs('#playerIframe');
-  try{ v.pause(); }catch(e){}
-  v.style.display='none'; v.innerHTML='';
-  f.style.display='block';
-  f.src=`https://www.youtube.com/embed/${id}?rel=0&modestbranding=1&color=white`;
+
+function showYouTube(id, autoplay = false){
+  const v = qs('#playerVideo');
+  const f = qs('#playerIframe');
+
+  try { v.pause(); } catch(e){}
+  v.style.display = 'none';
+  v.innerHTML = '';
+
+  f.style.display = 'block';
+
+  // Chrome/Safari allow autoplay only when muted
+  const autoParams = autoplay ? '&autoplay=1&mute=1' : '';
+
+  f.src = `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1&color=white${autoParams}`;
 }
+
 function renderVideos(list){
-  const wrap=qs('#videosList'); wrap.innerHTML='';
-  list.forEach(v=>{
-    const id=v.yt_id||ytIdFromUrl(v.url||'')||'';
-    const thumb=v.thumbnail||(id?`https://i.ytimg.com/vi/${id}/hqdefault.jpg`: '');
-    const el=document.createElement('div'); el.className='vid-card';
-    el.innerHTML = `<div class="thumb">${thumb?`<img src="${thumb}" style="width:100%;height:100%;object-fit:cover;border-radius:10px" />`:'No preview'}</div>
-      <div><div class="vid-title">${(v.title||'Untitled Clip')}</div><div class="vid-meta">${(v.duration||v.category||'')+''}</div></div>`;
-    el.addEventListener('click',()=>{
+  const wrap = qs('#videosList');
+  wrap.innerHTML = '';
+
+  list.forEach(v => {
+    const id = v.yt_id || ytIdFromUrl(v.url || '') || '';
+    const thumb = v.thumbnail || (id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : '');
+    const el = document.createElement('div');
+    el.className = 'vid-card';
+
+    el.innerHTML = `
+      <div class="thumb">
+        ${thumb
+          ? `<img src="${thumb}" style="width:100%;height:100%;object-fit:cover;border-radius:10px" />`
+          : 'No preview'}
+      </div>
+      <div>
+        <div class="vid-title">${v.title || 'Untitled Clip'}</div>
+        <div class="vid-meta">${(v.duration || v.category || '') + ''}</div>
+      </div>`;
+
+    el.addEventListener('click', () => {
       const vidId = v.yt_id || ytIdFromUrl(v.url || '');
-      if(vidId){ showYouTube(vidId); }
-      else if(v.url && (v.url.endsWith('.mp4')||v.url.endsWith('.mov'))){ showLocalVideo(v.url); }
-      else { toast('No playable source for this item.'); }
+      if (vidId){
+        // user-initiated play: no need to force autoplay params
+        showYouTube(vidId, false);
+      } else if (v.url && (v.url.endsWith('.mp4') || v.url.endsWith('.mov'))){
+        showLocalVideo(v.url);
+      } else {
+        toast('No playable source for this item.');
+      }
     });
+
     wrap.appendChild(el);
   });
 }
@@ -380,17 +425,19 @@ async function loadVideos(){
 
   renderVideos(list);
 
-  // Auto-play the very first (intro) item
+  // Auto-play the very first (intro) item on page load
   if (list.length){
     const first = list[0];
     const id = first.yt_id || ytIdFromUrl(first.url || '');
-    if (id) {
-      showYouTube(id);
+    if (id){
+      // autoplay = true for initial intro
+      showYouTube(id, true);
     } else if (first.url && (first.url.endsWith('.mp4') || first.url.endsWith('.mov'))){
       showLocalVideo(first.url);
     }
   }
 }
+
 
 /* ---------- Chat + Cites ---------- */
 const messages=[]; let sending=false; let typingEl=null;
