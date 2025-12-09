@@ -123,6 +123,9 @@ ONNX_DIR = BASE_DIR / "onnx"
 ONNX_DIR.mkdir(parents=True, exist_ok=True)
 ONNX_MODEL_PATH = ONNX_DIR / "model.onnx"
 
+MODEL_TOKENIZER_PATH = BASE_DIR / "tokenizer"   # folder with tokenizer files
+
+
 # Hugging Face tokenizer + config live in ./tokenizer
 TOKENIZER_DIR = BASE_DIR / "tokenizer"
 
@@ -154,26 +157,41 @@ else:
 TOKENIZER = None
 ONNX_SESSION = None
 
+# 1) Tokenizer (force slow GPT-2, same as what worked locally)
 try:
-    # Load Hugging Face tokenizer from ./tokenizer
-    TOKENIZER = AutoTokenizer.from_pretrained(str(TOKENIZER_DIR), local_files_only=True)
-    logger.info("Tokenizer loaded from %s (vocab size=%s)", TOKENIZER_DIR, TOKENIZER.vocab_size)
+    TOKENIZER = AutoTokenizer.from_pretrained(
+        str(TOKENIZER_DIR),
+        local_files_only=True,
+        use_fast=False,          # important: use slow tokenizer
+    )
+    vocab_size = getattr(TOKENIZER, "vocab_size", "n/a")
+    logger.info(
+        "Tokenizer loaded from %s (vocab size=%s)",
+        TOKENIZER_DIR,
+        vocab_size,
+    )
 except Exception as e:
+    TOKENIZER = None
     logger.warning("Failed to load tokenizer from %s: %s", TOKENIZER_DIR, e)
 
+# 2) ONNX session
 try:
-    # Load ONNX model from ./onnx/model.onnx
     if ONNX_MODEL_PATH.exists():
         ONNX_SESSION = ort.InferenceSession(
             str(ONNX_MODEL_PATH),
             providers=["CPUExecutionProvider"],
         )
-        logger.info("ONNX model loaded from %s", ONNX_MODEL_PATH)
+        onnx_inputs = [i.name for i in ONNX_SESSION.get_inputs()]
+        logger.info(
+            "ONNX model loaded from %s (inputs=%s)",
+            ONNX_MODEL_PATH,
+            onnx_inputs,
+        )
     else:
         logger.warning("ONNX model not found at %s", ONNX_MODEL_PATH)
 except Exception as e:
+    ONNX_SESSION = None
     logger.warning("Failed to initialize ONNX session: %s", e)
-
 
 # ────────── Flask ──────────
 app = Flask(__name__, static_folder=str(BASE_DIR), static_url_path="")
