@@ -5014,7 +5014,25 @@ class T5ONNX:
             logger.exception(f"T5 ONNX generate failed: {e}")
             return ""
 
-t5_onnx = T5ONNX(ONNX_MODEL_PATH, MODEL_TOKENIZER_PATH)
+try:
+    if ONNX_MODEL_PATH.exists() and MODEL_TOKENIZER_PATH.exists():
+        t5_onnx = T5ONNX(ONNX_MODEL_PATH, MODEL_TOKENIZER_PATH)
+        logger.info(
+            "T5ONNX loaded from %s (onnx) and %s (tokenizer)",
+            ONNX_MODEL_PATH,
+            MODEL_TOKENIZER_PATH,
+        )
+    else:
+        t5_onnx = None
+        logger.warning(
+            "Skipping T5ONNX: ONNX_MODEL_PATH=%s exists=%s, MODEL_TOKENIZER_PATH=%s exists=%s",
+            ONNX_MODEL_PATH, ONNX_MODEL_PATH.exists(),
+            MODEL_TOKENIZER_PATH, MODEL_TOKENIZER_PATH.exists(),
+        )
+except Exception as e:
+    t5_onnx = None
+    logger.warning("Failed to init T5ONNX: %s", e)
+
 
 DESTINY_THEME_NAMES = {
     1: "Pioneer Grace",
