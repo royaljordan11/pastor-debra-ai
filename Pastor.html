@@ -314,7 +314,8 @@ function showYouTube(id){
   const v=qs('#playerVideo'); const f=qs('#playerIframe');
   try{ v.pause(); }catch(e){}
   v.style.display='none'; v.innerHTML='';
-  f.style.display='block'; f.src=`https://www.youtube.com/embed/${id}?rel=0&modestbranding=1&color=white`;
+  f.style.display='block';
+  f.src=`https://www.youtube.com/embed/${id}?rel=0&modestbranding=1&color=white`;
 }
 function renderVideos(list){
   const wrap=qs('#videosList'); wrap.innerHTML='';
@@ -325,64 +326,69 @@ function renderVideos(list){
     el.innerHTML = `<div class="thumb">${thumb?`<img src="${thumb}" style="width:100%;height:100%;object-fit:cover;border-radius:10px" />`:'No preview'}</div>
       <div><div class="vid-title">${(v.title||'Untitled Clip')}</div><div class="vid-meta">${(v.duration||v.category||'')+''}</div></div>`;
     el.addEventListener('click',()=>{
-      if(id){ showYouTube(id); }
+      const vidId = v.yt_id || ytIdFromUrl(v.url || '');
+      if(vidId){ showYouTube(vidId); }
       else if(v.url && (v.url.endsWith('.mp4')||v.url.endsWith('.mov'))){ showLocalVideo(v.url); }
       else { toast('No playable source for this item.'); }
     });
     wrap.appendChild(el);
   });
 }
+
 async function loadVideos(){
-  try{
+  // Your 4 YouTube videos, hard-coded
+  const featured = [
+    {
+      title: "Pastor Debra Jordan Intro",
+      url: "https://www.youtube.com/watch?v=WaNaM_OXxA4",
+      yt_id: "WaNaM_OXxA4",
+      duration: "Intro"
+    },
+    {
+      title: "Thankful People Are Thinking People",
+      url: "https://www.youtube.com/watch?v=Elq9ytCUTH0",
+      yt_id: "Elq9ytCUTH0",
+      duration: "Teaching"
+    },
+    {
+      title: "Wisdom and Prayer",
+      url: "https://www.youtube.com/watch?v=L1YBfgjcP2c",
+      yt_id: "L1YBfgjcP2c",
+      duration: "Teaching"
+    },
+    {
+      title: "The Power of Small Blessings",
+      url: "https://www.youtube.com/watch?v=5067ZdbPskc",
+      yt_id: "5067ZdbPskc",
+      duration: "Teaching"
+    }
+  ];
+
+  let list = [...featured];
+
+  try {
+    // Optionally pull any extra videos from your backend
     const data = await fetchJSON('/videos');
-    let list = (data && data.videos) || [];
-
-    // 1) First item (your mom.mp4 intro from /videos)
-    if (list.length) {
-      list[0].title = "Pastor Debra Jordan Intro.";
+    const backendList = (data && data.videos) || [];
+    if (backendList.length) {
+      list = [...featured, ...backendList];
     }
+  } catch(e){
+    // If /videos fails, we still show the 4 YouTube clips
+    // console.error(e);
+  }
 
-    // 2–4) Local clips right under the intro, with your exact titles
-    const extraLocal = [
-      {
-        title: "Thankful People Are Thinking People",
-        url: "momone.mp4",
-        duration: "Teaching"
-      },
-      {
-        title: "Wisdom and Prayer",
-        url: "momtwo.mp4",
-        duration: "Teaching"
-      },
-      {
-        title: "The Power of Small Blessings",
-        url: "momthree.mp4",
-        duration: "Teaching"
-      }
-    ];
+  renderVideos(list);
 
-    if (list.length) {
-      const [first, ...rest] = list;
-      list = [first, ...extraLocal, ...rest];
-    } else {
-      // if /videos ever returns nothing, still show your 3 locals
-      list = extraLocal;
+  // Auto-play the very first (intro) item
+  if (list.length){
+    const first = list[0];
+    const id = first.yt_id || ytIdFromUrl(first.url || '');
+    if (id) {
+      showYouTube(id);
+    } else if (first.url && (first.url.endsWith('.mp4') || first.url.endsWith('.mov'))){
+      showLocalVideo(first.url);
     }
-
-    renderVideos(list);
-
-    // Auto-play the very first item (the intro)
-    if (list.length){
-      const first = list[0];
-      const id = first.yt_id || ytIdFromUrl(first.url || '');
-      if (id) {
-        showYouTube(id);
-      } else if (first.url && (first.url.endsWith('.mp4') || first.url.endsWith('.mov'))){
-        showLocalVideo(first.url);
-      }
-    }
-  }catch(e){
-    // optional: console.error(e);
   }
 }
 
