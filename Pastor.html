@@ -336,14 +336,19 @@ function showYouTube(id, autoplay = false){
   const v = qs('#playerVideo');
   const f = qs('#playerIframe');
 
-  if (!f) return; // if iframe not found, bail out
+  if (!f) {
+    console.warn('showYouTube: #playerIframe not found');
+    return;
+  }
 
+  // Hide and clear the HTML5 <video> player
   if (v) {
     try { v.pause(); } catch (e) {}
     v.style.display = 'none';
     v.innerHTML = '';
   }
 
+  // Show the iframe player
   f.style.display = 'block';
 
   // Allow autoplay on the iframe itself
@@ -352,10 +357,13 @@ function showYouTube(id, autoplay = false){
     'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share'
   );
 
-  // Browsers only allow autoplay if muted
-  const autoParams = autoplay ? '&autoplay=1&mute=1' : '';
+  // Browsers only allow autoplay if muted; playsinline helps on mobile
+  const autoParams = autoplay
+    ? '&autoplay=1&mute=1&playsinline=1'
+    : '&playsinline=1';
 
-  f.src = `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1&color=white${autoParams}`;
+  const src = `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1&color=white${autoParams}`;
+  f.src = src;
 }
 
 function renderVideos(list){
@@ -386,7 +394,7 @@ function renderVideos(list){
     el.addEventListener('click', () => {
       const vidId = v.yt_id || ytIdFromUrl(v.url || '');
       if (vidId) {
-        // user clicked – no need to force autoplay params
+        // user clicked – standard YouTube load (no forced autoplay params)
         showYouTube(vidId, false);
       } else if (v.url && (v.url.endsWith('.mp4') || v.url.endsWith('.mov'))) {
         showLocalVideo(v.url);
@@ -444,7 +452,6 @@ async function loadVideos(){
     }
   } catch (e) {
     // If /videos fails, we still show the 4 YouTube clips
-    // console.error(e);
   }
 
   renderVideos(list);
@@ -454,7 +461,7 @@ async function loadVideos(){
     const first = list[0];
     const id = first.yt_id || ytIdFromUrl(first.url || '');
     if (id) {
-      // autoplay = true for initial intro
+      // Try to autoplay the intro (muted)
       showYouTube(id, true);
     } else if (first.url && (first.url.endsWith('.mp4') || first.url.endsWith('.mov'))) {
       showLocalVideo(first.url);
@@ -464,12 +471,11 @@ async function loadVideos(){
 
 // Make sure videos load when the page first starts up
 window.addEventListener('load', () => {
-  // small delay to make sure DOM + layout are stable
+  // Small delay to ensure layout is ready
   setTimeout(() => {
     loadVideos().catch(() => {});
   }, 300);
 });
-
 
 /* ---------- Chat + Cites ---------- */
 const messages=[]; let sending=false; let typingEl=null;
