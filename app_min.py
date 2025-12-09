@@ -72,7 +72,8 @@ def _get_float(env_key: str, default: float) -> float:
 # ────────── Env & Config ──────────
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    # IMPORTANT: don't let .env override Railway/project env
+    load_dotenv(override=False)
 except Exception:
     pass
 
@@ -85,6 +86,32 @@ MAX_INPUT_CHARS = _get_int("MAX_INPUT_CHARS", 4000)
 _allow_raw = os.getenv("CORS_ALLOWLIST", "*")
 _CORS_ALLOWED = [o.strip() for o in _allow_raw.split(",") if o.strip()]
 CORS_CONFIG = {"origins": "*" if _CORS_ALLOWED == ["*"] else _CORS_ALLOWED}
+
+# ────────── Logging ──────────
+logging.basicConfig(
+    level=logging.DEBUG if DEBUG_MODE else logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s :: %(message)s",
+)
+logger = logging.getLogger("pastor-debra-hybrid")
+
+
+def _clean_env_url(env_key: str) -> str:
+    """
+    Read a URL from an env var and clean common mistakes:
+    - Strip whitespace
+    - Strip leading '=' or spaces (e.g. '=https://...' -> 'https://...')
+    """
+    raw = os.getenv(env_key, "") or ""
+    cleaned = raw.strip().lstrip("= ")
+    if raw and cleaned != raw:
+        logger.warning(
+            "%s had leading junk (%r) -> cleaned to %r",
+            env_key,
+            raw,
+            cleaned,
+        )
+    return cleaned
+
 
 # OpenAI/GPT
 OPENAI_API_KEY   = os.getenv("OPENAI_API_KEY", "")
@@ -117,13 +144,6 @@ def _throttle(ip: str) -> bool:
         return False
 
 
-# ────────── Logging ──────────
-logging.basicConfig(
-    level=logging.DEBUG if DEBUG_MODE else logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s :: %(message)s",
-)
-logger = logging.getLogger("pastor-debra-hybrid")
-
 if not OPENAI_API_KEY:
     logger.warning("OPENAI_API_KEY not set — GPT disabled.")
 else:
@@ -144,7 +164,6 @@ ONNX_DIR.mkdir(parents=True, exist_ok=True)
 
 # ONNX model stored inside the volume at /app/onnx/model.onnx
 ONNX_MODEL_PATH = ONNX_DIR / "model.onnx"
-
 
 # Hugging Face tokenizer lives in ./tokenizer
 TOKENIZER_DIR = BASE_DIR / "tokenizer"
@@ -168,8 +187,8 @@ SCRIPTURE_CACHE_PATH  = BASE_DIR / "scripture_cache.json"
 
 # ────────── Remote zip download helpers (Google Drive) ──────────
 # Expects env vars:
-#   TOKENIZER_ZIP_URL = https://drive.google.com/uc?export=download&id=17verVsIDPO93Utgj3EaM17WzB6q27nUj
-#   ONNX_ZIP_URL      = https://drive.google.com/uc?export=download&id=1JVD6uqwDiR3mkz4AZudF4VViKUliL_5N
+#   TOKENIZER_ZIP_URL = https://drive.google.com/uc?export=download&id=...
+#   ONNX_ZIP_URL      = https://drive.google.com/uc?export=download&id=...
 # Files are downloaded once on first boot and then reused.
 
 def _download_zip_to_dir(url: str, dest_dir: Path, label: str) -> None:
@@ -177,8 +196,9 @@ def _download_zip_to_dir(url: str, dest_dir: Path, label: str) -> None:
     Download a zip from `url` and extract it into `dest_dir`.
     Safe to call multiple times; it will overwrite existing files.
     """
+    url = (url or "").strip().lstrip("= ")
     if not url:
-        logger.warning("%s_ZIP_URL not set; skipping download.", label)
+        logger.warning("%s_ZIP_URL empty after cleaning; skipping download.", label)
         return
 
     try:
@@ -218,9 +238,15 @@ def ensure_onnx_from_zip() -> None:
     If missing, download ONNX_ZIP_URL and extract into ONNX_DIR.
     """
     if ONNX_MODEL_PATH.exists():
+        logger.info("ONNX model already present at %s", ONNX_MODEL_PATH)
         return
 
-    url = os.getenv("ONNX_ZIP_URL", "")
+    url = _clean_env_url("ONNX_ZIP_URL")
+    if not url:
+        logger.warning("ONNX_ZIP_URL not set or empty; skipping ONNX download.")
+        return
+
+    logger.info("ONNX_ZIP_URL (cleaned) = %r", url)
     _download_zip_to_dir(url, ONNX_DIR, "ONNX")
 
     if not ONNX_MODEL_PATH.exists():
@@ -237,6 +263,8 @@ def ensure_onnx_from_zip() -> None:
                 "Multiple ONNX candidates found in %s; please ensure model.onnx is present.",
                 ONNX_DIR,
             )
+        else:
+            logger.warning("No .onnx files found in %s after download.", ONNX_DIR)
 
 
 def ensure_tokenizer_from_zip() -> None:
@@ -247,14 +275,18 @@ def ensure_tokenizer_from_zip() -> None:
     if TOKENIZER_DIR.exists() and any(TOKENIZER_DIR.iterdir()):
         return
 
-    url = os.getenv("TOKENIZER_ZIP_URL", "")
+    url = _clean_env_url("TOKENIZER_ZIP_URL")
+    if not url:
+        logger.warning("TOKENIZER_ZIP_URL not set or empty; skipping tokenizer download.")
+        return
+
+    logger.info("TOKENIZER_ZIP_URL (cleaned) = %r", url)
     _download_zip_to_dir(url, TOKENIZER_DIR, "TOKENIZER")
 
 
 # ────────── ONNX + Tokenizer Init ──────────
 TOKENIZER = None
 ONNX_SESSION = None  # will become an onnxruntime.InferenceSession after init
-
 
 # 1) ONNX session (with optional remote download)
 try:
@@ -312,6 +344,13 @@ def _maybe_init_tokenizer() -> None:
 
 # Initialize tokenizer (local: already present; Railway: triggers download)
 _maybe_init_tokenizer()
+
+
+# ────────── Flask ──────────
+app = Flask(__name__, static_folder=str(BASE_DIR), static_url_path="")
+# Reduce surprise formatting diffs in JSON responses
+app.config.update(JSON_SORT_KEYS=False, JSONIFY_PRETTYPRINT_REGULAR=False)
+CORS(app, resources={r"/*": CORS_CONFIG})
 
 
 # ────────── Flask ──────────
