@@ -142,10 +142,9 @@ BASE_DIR = Path(os.getenv("PASTOR_DEBRA_BASE_DIR", Path(__file__).resolve().pare
 ONNX_DIR = BASE_DIR / "onnx"
 ONNX_DIR.mkdir(parents=True, exist_ok=True)
 
-# Allow override via env (but default to /app/onnx/model.onnx)
-ONNX_MODEL_PATH = Path(
-    os.getenv("ONNX_MODEL_PATH", str(ONNX_DIR / "model.onnx"))
-).resolve()
+# ONNX model stored inside the volume at /app/onnx/model.onnx
+ONNX_MODEL_PATH = ONNX_DIR / "model.onnx"
+
 
 # Hugging Face tokenizer lives in ./tokenizer
 TOKENIZER_DIR = BASE_DIR / "tokenizer"
@@ -253,8 +252,8 @@ def ensure_tokenizer_from_zip() -> None:
 
 
 # ────────── ONNX + Tokenizer Init ──────────
-TOKENIZER: Optional[AutoTokenizer] = None
-ONNX_SESSION: Optional[onnxruntime.InferenceSession] = None  # type: ignore[name-defined]
+TOKENIZER = None
+ONNX_SESSION = None  # will become an onnxruntime.InferenceSession after init
 
 
 # 1) ONNX session (with optional remote download)
