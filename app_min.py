@@ -231,6 +231,78 @@ def _download_zip_to_dir(url: str, dest_dir: Path, label: str) -> None:
     except Exception as e:
         logger.warning("Failed to download/extract %s zip: %s", label, e)
 
+def _download_zip_to_dir(url: str, dest_dir: Path, label: str) -> None:
+    """
+    Download a zip from `url` and extract it into `dest_dir`.
+
+    For label == "ONNX", if the downloaded file is NOT a valid zip,
+    we fall back to treating it as a raw .onnx file and save it to
+    ONNX_MODEL_PATH instead. This lets you point ONNX_ZIP_URL either
+    to a real zip OR directly to model.onnx.
+    """
+    url = (url or "").strip().lstrip("= ")
+    if not url:
+        logger.warning("%s_ZIP_URL empty after cleaning; skipping download.", label)
+        return
+
+    try:
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        tmp_zip = dest_dir.parent / f"{label.lower()}_download.zip"
+        logger.info("Downloading %s zip from %s ...", label, url)
+
+        with requests.get(url, stream=True, timeout=600) as r:
+            r.raise_for_status()
+            with open(tmp_zip, "wb") as f:
+                for chunk in r.iter_content(chunk_size=1024 * 1024):
+                    if chunk:
+                        f.write(chunk)
+
+        logger.info(
+            "Download finished: %s (size=%s bytes)",
+            tmp_zip,
+            tmp_zip.stat().st_size,
+        )
+
+        # First, try to treat it as a normal zip
+        try:
+            with zipfile.ZipFile(tmp_zip, "r") as z:
+                z.extractall(dest_dir)
+            logger.info("%s zip extracted into %s", label, dest_dir)
+            try:
+                tmp_zip.unlink()
+            except Exception:
+                pass
+
+        except zipfile.BadZipFile as e:
+            logger.warning("Downloaded %s is not a zip file: %s", label, e)
+
+            # Special case: ONNX may be served as raw .onnx file
+            if label.upper() == "ONNX":
+                try:
+                    # Save it directly as /app/onnx/model.onnx
+                    raw_target = ONNX_MODEL_PATH
+                    dest_dir.mkdir(parents=True, exist_ok=True)
+                    if raw_target.exists():
+                        raw_target.unlink()
+                    tmp_zip.rename(raw_target)
+                    logger.info(
+                        "Treated downloaded %s as raw ONNX model -> %s",
+                        label,
+                        raw_target,
+                    )
+                except Exception as e2:
+                    logger.warning("Failed to move raw ONNX file: %s", e2)
+            else:
+                logger.warning(
+                    "Non-zip download for %s and no special handling; leaving file at %s",
+                    label,
+                    tmp_zip,
+                )
+
+    except Exception as e:
+        logger.warning("Failed to download/extract %s zip: %s", label, e)
+
+
 
 def ensure_onnx_from_zip() -> None:
     """
