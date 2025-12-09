@@ -114,12 +114,17 @@ def _throttle(ip: str) -> bool:
         q.append(now)
         return False
 
+
 # Paths (robust)
 BASE_DIR = Path(os.getenv("PASTOR_DEBRA_BASE_DIR", Path(__file__).resolve().parent)).resolve()
+
+# ONNX model lives in ./onnx/model.onnx
 ONNX_DIR = BASE_DIR / "onnx"
 ONNX_DIR.mkdir(parents=True, exist_ok=True)
 ONNX_MODEL_PATH = ONNX_DIR / "model.onnx"
-MODEL_TOKENIZER_PATH = BASE_DIR / "my_model"
+
+# Hugging Face tokenizer + config live in ./tokenizer
+TOKENIZER_DIR = BASE_DIR / "tokenizer"
 
 PASTOR_DEBRA_JSON = BASE_DIR / "PASTOR_DEBRA.json"
 SESSION_PASTOR_DEBRA_JSON = BASE_DIR / "SESSION_PASTOR_DEBRA.json"
@@ -127,7 +132,6 @@ FACES_OF_EVE_JSON = BASE_DIR / "FACES_OF_EVE.json"
 DESTINY_THEMES_JSON = BASE_DIR / "destiny_themes.json"
 VIDEOS_JSON = BASE_DIR / "videos.json"
 DESTINY_JSON_PATH = os.path.join(BASE_DIR, "destiny_themes.json")
-
 
 # Scripture settings
 SCRIPTURE_TRANSLATION = os.getenv("SCRIPTURE_TRANSLATION", "web")  # web, kjv, asv...
@@ -145,6 +149,31 @@ if not OPENAI_API_KEY:
     logger.warning("OPENAI_API_KEY not set — GPT disabled.")
 else:
     logger.info(f"GPT configured | MODEL={OPENAI_MODEL} ALT={OPENAI_MODEL_ALT} BASE={OPENAI_BASE_URL}")
+
+# ────────── ONNX + Tokenizer Init ──────────
+TOKENIZER = None
+ONNX_SESSION = None
+
+try:
+    # Load Hugging Face tokenizer from ./tokenizer
+    TOKENIZER = AutoTokenizer.from_pretrained(str(TOKENIZER_DIR), local_files_only=True)
+    logger.info("Tokenizer loaded from %s (vocab size=%s)", TOKENIZER_DIR, TOKENIZER.vocab_size)
+except Exception as e:
+    logger.warning("Failed to load tokenizer from %s: %s", TOKENIZER_DIR, e)
+
+try:
+    # Load ONNX model from ./onnx/model.onnx
+    if ONNX_MODEL_PATH.exists():
+        ONNX_SESSION = ort.InferenceSession(
+            str(ONNX_MODEL_PATH),
+            providers=["CPUExecutionProvider"],
+        )
+        logger.info("ONNX model loaded from %s", ONNX_MODEL_PATH)
+    else:
+        logger.warning("ONNX model not found at %s", ONNX_MODEL_PATH)
+except Exception as e:
+    logger.warning("Failed to initialize ONNX session: %s", e)
+
 
 # ────────── Flask ──────────
 app = Flask(__name__, static_folder=str(BASE_DIR), static_url_path="")
