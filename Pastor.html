@@ -329,6 +329,8 @@ function showLocalVideo(src){
   }
 
   v.load();
+  // this may still be blocked by autoplay policies on some browsers,
+  // but we ask for a normal (unmuted) play:
   v.play().catch(() => {});
 }
 
@@ -352,14 +354,20 @@ function showYouTube(id, autoplay = false){
   f.style.display = 'block';
 
   // Allow autoplay on the iframe itself
-  f.setAttribute(
-    'allow',
-    'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share'
-  );
+  const allow = [
+    'accelerometer',
+    'autoplay',
+    'clipboard-write',
+    'encrypted-media',
+    'gyroscope',
+    'picture-in-picture',
+    'web-share'
+  ].join('; ');
+  f.setAttribute('allow', allow);
 
-  // Browsers only allow autoplay if muted; playsinline helps on mobile
+  // We request autoplay with normal audio; browser may still block it
   const autoParams = autoplay
-    ? '&autoplay=1&mute=1&playsinline=1'
+    ? '&autoplay=1&playsinline=1'
     : '&playsinline=1';
 
   const src = `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1&color=white${autoParams}`;
@@ -394,7 +402,7 @@ function renderVideos(list){
     el.addEventListener('click', () => {
       const vidId = v.yt_id || ytIdFromUrl(v.url || '');
       if (vidId) {
-        // user clicked – standard YouTube load (no forced autoplay params)
+        // user clicked – this counts as a gesture so YouTube can play with sound
         showYouTube(vidId, false);
       } else if (v.url && (v.url.endsWith('.mp4') || v.url.endsWith('.mov'))) {
         showLocalVideo(v.url);
@@ -456,12 +464,11 @@ async function loadVideos(){
 
   renderVideos(list);
 
-  // Auto-play the very first (intro) item on page load
+  // Request autoplay of the intro on page load
   if (list.length) {
     const first = list[0];
     const id = first.yt_id || ytIdFromUrl(first.url || '');
     if (id) {
-      // Try to autoplay the intro (muted)
       showYouTube(id, true);
     } else if (first.url && (first.url.endsWith('.mp4') || first.url.endsWith('.mov'))) {
       showLocalVideo(first.url);
