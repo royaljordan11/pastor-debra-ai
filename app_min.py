@@ -195,10 +195,12 @@ def _download_zip_to_dir(url: str, dest_dir: Path, label: str) -> None:
     """
     Download from `url` and extract into `dest_dir`.
 
-    - For normal labels, expects a ZIP and unpacks it.
-    - For label == "ONNX", if the file is not a valid ZIP, treat it as a
-      raw model file and save it directly to ONNX_MODEL_PATH. This lets you
-      point ONNX_ZIP_URL either at a real zip or straight at model.onnx.
+    - Normal case: expects a ZIP and unpacks it.
+    - Google Drive special case: if we hit the virus-scan warning HTML,
+      we extract the confirm token and redo the download so we get the
+      actual file.
+    - For label == "ONNX", if the final file is not a valid zip, we treat
+      it as a raw .onnx and move it to ONNX_MODEL_PATH.
     """
     url = (url or "").strip().lstrip("= ")
     if not url:
@@ -210,7 +212,7 @@ def _download_zip_to_dir(url: str, dest_dir: Path, label: str) -> None:
         tmp_zip = dest_dir.parent / f"{label.lower()}_download.zip"
         logger.info("Downloading %s zip from %s ...", label, url)
 
-        # Download file
+        # ---- First download attempt ----
         with requests.get(url, stream=True, timeout=600) as r:
             r.raise_for_status()
             with open(tmp_zip, "wb") as f:
@@ -224,7 +226,52 @@ def _download_zip_to_dir(url: str, dest_dir: Path, label: str) -> None:
             tmp_zip.stat().st_size,
         )
 
-        # First, try to interpret it as a normal ZIP
+        # ---- Detect Google Drive virus-scan warning HTML ----
+        # It is a tiny HTML page (<10 KB) with "Google Drive - Virus scan warning".
+        try:
+            if label.upper() == "ONNX" and tmp_zip.stat().st_size < 10_000:
+                with open(tmp_zip, "r", encoding="utf-8", errors="ignore") as f:
+                    snippet = f.read(20_000)
+
+                if "Google Drive - Virus scan warning" in snippet:
+                    logger.info(
+                        "Detected Google Drive virus-scan warning page for %s; "
+                        "attempting second download with confirm token.",
+                        label,
+                    )
+                    # Parse hidden id and confirm values from the HTML form
+                    m_id = re.search(r'name="id"\s+value="([^"]+)"', snippet)
+                    m_confirm = re.search(r'name="confirm"\s+value="([^"]+)"', snippet)
+                    if m_id and m_confirm:
+                        file_id = m_id.group(1)
+                        confirm = m_confirm.group(1)
+                        second_url = (
+                            "https://drive.usercontent.google.com/download"
+                            f"?id={file_id}&export=download&confirm={confirm}"
+                        )
+                        logger.info("Retrying %s download from %s", label, second_url)
+
+                        # Second request: real file
+                        with requests.get(second_url, stream=True, timeout=600) as r2:
+                            r2.raise_for_status()
+                            with open(tmp_zip, "wb") as f2:
+                                for chunk in r2.iter_content(chunk_size=1024 * 1024):
+                                    if chunk:
+                                        f2.write(chunk)
+
+                        logger.info(
+                            "Second download finished: %s (size=%s bytes)",
+                            tmp_zip,
+                            tmp_zip.stat().st_size,
+                        )
+                    else:
+                        logger.warning(
+                            "Could not parse id/confirm tokens from virus-scan page."
+                        )
+        except Exception as e:
+            logger.warning("Error while handling Google Drive virus page: %s", e)
+
+        # ---- Now try to treat whatever we have as a ZIP ----
         try:
             with zipfile.ZipFile(tmp_zip, "r") as z:
                 z.extractall(dest_dir)
@@ -239,7 +286,7 @@ def _download_zip_to_dir(url: str, dest_dir: Path, label: str) -> None:
         except zipfile.BadZipFile as e:
             logger.warning("Downloaded %s is not a zip file: %s", label, e)
 
-            # Special case: ONNX may be served as a raw .onnx file (not zipped)
+            # Special case: ONNX may be served as raw .onnx file (not zipped)
             if label.upper() == "ONNX":
                 try:
                     dest_dir.mkdir(parents=True, exist_ok=True)
@@ -271,7 +318,6 @@ def _download_zip_to_dir(url: str, dest_dir: Path, label: str) -> None:
 
     except Exception as e:
         logger.warning("Failed to download/extract %s zip: %s", label, e)
-
 
 
 def ensure_onnx_from_zip() -> None:
