@@ -293,19 +293,20 @@ function toast(msg){ const t=qs('#toast'); t.textContent=msg; t.classList.add('s
 
 /* ---------- Videos (sidebar) ---------- */
 function ytIdFromUrl(url){
-  if(!url) return null;
-  try{
+  if (!url) return null;
+  try {
     const u = new URL(url);
     if (u.hostname.includes('youtu.be')) return u.pathname.slice(1);
     if (u.hostname.includes('youtube.com')) return u.searchParams.get('v');
-  } catch(e){}
+  } catch (e) {}
   return null;
 }
 
 function showLocalVideo(src){
   const v = qs('#playerVideo');
   const f = qs('#playerIframe');
-  try { v.pause(); } catch(e){}
+
+  try { v.pause(); } catch (e) {}
   v.innerHTML = '';
 
   const type = src.endsWith('.mp4')
@@ -324,20 +325,26 @@ function showLocalVideo(src){
   f.src = '';
 
   v.load();
-  v.play().catch(()=>{});
+  v.play().catch(() => {});
 }
 
 function showYouTube(id, autoplay = false){
   const v = qs('#playerVideo');
   const f = qs('#playerIframe');
 
-  try { v.pause(); } catch(e){}
+  try { v.pause(); } catch (e) {}
   v.style.display = 'none';
   v.innerHTML = '';
 
   f.style.display = 'block';
 
-  // Chrome/Safari allow autoplay only when muted
+  // Allow autoplay on the iframe itself
+  f.setAttribute(
+    'allow',
+    'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share'
+  );
+
+  // Browsers only allow autoplay if muted
   const autoParams = autoplay ? '&autoplay=1&mute=1' : '';
 
   f.src = `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1&color=white${autoParams}`;
@@ -355,9 +362,11 @@ function renderVideos(list){
 
     el.innerHTML = `
       <div class="thumb">
-        ${thumb
-          ? `<img src="${thumb}" style="width:100%;height:100%;object-fit:cover;border-radius:10px" />`
-          : 'No preview'}
+        ${
+          thumb
+            ? `<img src="${thumb}" style="width:100%;height:100%;object-fit:cover;border-radius:10px" />`
+            : 'No preview'
+        }
       </div>
       <div>
         <div class="vid-title">${v.title || 'Untitled Clip'}</div>
@@ -366,10 +375,10 @@ function renderVideos(list){
 
     el.addEventListener('click', () => {
       const vidId = v.yt_id || ytIdFromUrl(v.url || '');
-      if (vidId){
-        // user-initiated play: no need to force autoplay params
+      if (vidId) {
+        // user clicked – we don't need to force autoplay params
         showYouTube(vidId, false);
-      } else if (v.url && (v.url.endsWith('.mp4') || v.url.endsWith('.mov'))){
+      } else if (v.url && (v.url.endsWith('.mp4') || v.url.endsWith('.mov'))) {
         showLocalVideo(v.url);
       } else {
         toast('No playable source for this item.');
@@ -380,7 +389,12 @@ function renderVideos(list){
   });
 }
 
+let _videosLoaded = false;
+
 async function loadVideos(){
+  if (_videosLoaded) return;
+  _videosLoaded = true;
+
   // Your 4 YouTube videos, hard-coded
   const featured = [
     {
@@ -418,7 +432,7 @@ async function loadVideos(){
     if (backendList.length) {
       list = [...featured, ...backendList];
     }
-  } catch(e){
+  } catch (e) {
     // If /videos fails, we still show the 4 YouTube clips
     // console.error(e);
   }
@@ -426,17 +440,23 @@ async function loadVideos(){
   renderVideos(list);
 
   // Auto-play the very first (intro) item on page load
-  if (list.length){
+  if (list.length) {
     const first = list[0];
     const id = first.yt_id || ytIdFromUrl(first.url || '');
-    if (id){
+    if (id) {
       // autoplay = true for initial intro
       showYouTube(id, true);
-    } else if (first.url && (first.url.endsWith('.mp4') || first.url.endsWith('.mov'))){
+    } else if (first.url && (first.url.endsWith('.mp4') || first.url.endsWith('.mov'))) {
       showLocalVideo(first.url);
     }
   }
 }
+
+// Make sure videos load when the page first starts up
+window.addEventListener('DOMContentLoaded', () => {
+  loadVideos().catch(() => {});
+});
+
 
 
 /* ---------- Chat + Cites ---------- */
