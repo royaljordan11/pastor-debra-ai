@@ -14,7 +14,7 @@ Endpoints
 - POST /chat          -> main chat (router: T5 or GPT or forced)
 """
 
-import os, re, json, logging, time, hashlib, threading, datetime, random
+import os, re, json, logging, time, hashlib, threading, datetime, random, shutil
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from typing import List, Dict, Any, Tuple, Optional
