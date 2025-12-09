@@ -205,13 +205,14 @@ def index():
     return send_from_directory(str(BASE_DIR), "Pastor.html")
 
 
-@app.route("/")
-def root():
+@app.route("/health")
+def health():
     return jsonify({
         "status": "ok",
         "message": "Pastor Debra AI backend is running",
         "version": APP_VERSION,
     }), 200
+
 
 
 
@@ -224,6 +225,7 @@ def serve_mom_mp4():
         as_attachment=False,
         conditional=True
     )
+
 
 @app.route("/mom.mov")
 def serve_mom_mov():
