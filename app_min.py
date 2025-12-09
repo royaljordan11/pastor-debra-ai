@@ -193,8 +193,12 @@ SCRIPTURE_CACHE_PATH  = BASE_DIR / "scripture_cache.json"
 
 def _download_zip_to_dir(url: str, dest_dir: Path, label: str) -> None:
     """
-    Download a zip from `url` and extract it into `dest_dir`.
-    Safe to call multiple times; it will overwrite existing files.
+    Download from `url` and extract into `dest_dir`.
+
+    - For normal labels, expects a ZIP and unpacks it.
+    - For label == "ONNX", if the file is not a valid ZIP, treat it as a
+      raw model file and save it directly to ONNX_MODEL_PATH. This lets you
+      point ONNX_ZIP_URL either at a real zip or straight at model.onnx.
     """
     url = (url or "").strip().lstrip("= ")
     if not url:
@@ -206,6 +210,7 @@ def _download_zip_to_dir(url: str, dest_dir: Path, label: str) -> None:
         tmp_zip = dest_dir.parent / f"{label.lower()}_download.zip"
         logger.info("Downloading %s zip from %s ...", label, url)
 
+        # Download file
         with requests.get(url, stream=True, timeout=600) as r:
             r.raise_for_status()
             with open(tmp_zip, "wb") as f:
@@ -219,55 +224,13 @@ def _download_zip_to_dir(url: str, dest_dir: Path, label: str) -> None:
             tmp_zip.stat().st_size,
         )
 
-        with zipfile.ZipFile(tmp_zip, "r") as z:
-            z.extractall(dest_dir)
-        logger.info("%s zip extracted into %s", label, dest_dir)
-
-        try:
-            tmp_zip.unlink()
-        except Exception:
-            pass
-
-    except Exception as e:
-        logger.warning("Failed to download/extract %s zip: %s", label, e)
-
-def _download_zip_to_dir(url: str, dest_dir: Path, label: str) -> None:
-    """
-    Download a zip from `url` and extract it into `dest_dir`.
-
-    For label == "ONNX", if the downloaded file is NOT a valid zip,
-    we fall back to treating it as a raw .onnx file and save it to
-    ONNX_MODEL_PATH instead. This lets you point ONNX_ZIP_URL either
-    to a real zip OR directly to model.onnx.
-    """
-    url = (url or "").strip().lstrip("= ")
-    if not url:
-        logger.warning("%s_ZIP_URL empty after cleaning; skipping download.", label)
-        return
-
-    try:
-        dest_dir.mkdir(parents=True, exist_ok=True)
-        tmp_zip = dest_dir.parent / f"{label.lower()}_download.zip"
-        logger.info("Downloading %s zip from %s ...", label, url)
-
-        with requests.get(url, stream=True, timeout=600) as r:
-            r.raise_for_status()
-            with open(tmp_zip, "wb") as f:
-                for chunk in r.iter_content(chunk_size=1024 * 1024):
-                    if chunk:
-                        f.write(chunk)
-
-        logger.info(
-            "Download finished: %s (size=%s bytes)",
-            tmp_zip,
-            tmp_zip.stat().st_size,
-        )
-
-        # First, try to treat it as a normal zip
+        # First, try to interpret it as a normal ZIP
         try:
             with zipfile.ZipFile(tmp_zip, "r") as z:
                 z.extractall(dest_dir)
             logger.info("%s zip extracted into %s", label, dest_dir)
+
+            # Best-effort cleanup
             try:
                 tmp_zip.unlink()
             except Exception:
@@ -276,15 +239,22 @@ def _download_zip_to_dir(url: str, dest_dir: Path, label: str) -> None:
         except zipfile.BadZipFile as e:
             logger.warning("Downloaded %s is not a zip file: %s", label, e)
 
-            # Special case: ONNX may be served as raw .onnx file
+            # Special case: ONNX may be served as a raw .onnx file (not zipped)
             if label.upper() == "ONNX":
                 try:
-                    # Save it directly as /app/onnx/model.onnx
-                    raw_target = ONNX_MODEL_PATH
                     dest_dir.mkdir(parents=True, exist_ok=True)
-                    if raw_target.exists():
-                        raw_target.unlink()
-                    tmp_zip.rename(raw_target)
+                    raw_target = ONNX_MODEL_PATH
+
+                    # Remove any existing model
+                    try:
+                        if raw_target.exists():
+                            raw_target.unlink()
+                    except Exception:
+                        pass
+
+                    # Use shutil.move so it works across different volumes
+                    shutil.move(str(tmp_zip), str(raw_target))
+
                     logger.info(
                         "Treated downloaded %s as raw ONNX model -> %s",
                         label,
