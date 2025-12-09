@@ -205,15 +205,6 @@ def index():
     return send_from_directory(str(BASE_DIR), "Pastor.html")
 
 
-@app.route("/health")
-def health():
-    return jsonify({
-        "status": "ok",
-        "message": "Pastor Debra AI backend is running",
-        "version": APP_VERSION,
-    }), 200
-
-
 
 
 # Prefer MP4 for inline playback; keep .mov as a fallback
