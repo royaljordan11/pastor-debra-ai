@@ -8086,6 +8086,7 @@ def chat():
         # 1) SAFE PAYLOAD PARSE
         # ─────────────────────────────────────────────────────────────────────
         data = request.get_json(force=False, silent=True) or {}
+        print("🟦 CHAT PAYLOAD:", data)   # <— ADD THIS LINE
         msgs = data.get("messages", [])
         active_model = (data.get("active_model") or "auto").strip().lower()
         no_cache = bool(data.get("no_cache"))
