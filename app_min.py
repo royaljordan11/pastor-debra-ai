@@ -8140,16 +8140,106 @@ def chat():
         except Exception as e:
             logger.warning("POME fast-path error: %s", e)
 
-        # ── DEF quick menu (explicit) ────────────────────────────────────────
+        # ── DEF quick menu + Destiny Theme Interpretation (UPDATED) ────────────────────────────────
+        # ── DEF quick menu + Destiny Theme Interpretation (UPDATED) ────────────────────────────────
         try:
             if bool(data.get("def_chat")) or _DEF_TRIGGERS.match(user_text or ""):
+
                 full_name = (data.get("name") or data.get("full_name") or "").strip()
                 birthdate = (data.get("birthdate") or data.get("dob") or "").strip()
+
+                # ---------------------------------------------------------
+                # Destiny Theme title/number mapping
+                # ---------------------------------------------------------
+                THEME_TITLES = {
+                    "pioneer grace": 1,
+                    "peacemaker": 2,
+                    "psalmist": 3,
+                    "builder": 4,
+                    "holy freedom": 5,
+                    "keeper of covenant": 6,
+                    "mystic scholar": 7,
+                    "steward of influence": 8,
+                    "compassionate finisher": 9,
+                    "prophetic beacon": 11,
+                    "master repairer": 22,
+                    "servant-teacher": 33,
+                }
+
+                # ---------------------------------------------------------
+                # Detect Destiny Theme in user_text
+                # ---------------------------------------------------------
+                def _match_theme_from_text(text: str):
+                    t = (text or "").lower().strip()
+
+                    # titles first
+                    for title, num in THEME_TITLES.items():
+                        if title in t:
+                            return num, DESTINY_THEME_NAMES.get(num)
+
+                    # numbers
+                    nums = re.findall(r"\b(1|2|3|4|5|6|7|8|9|11|22|33)\b", t)
+                    if nums:
+                        n = int(nums[0])
+                        if n in DESTINY_THEME_NAMES:
+                            return n, DESTINY_THEME_NAMES[n]
+
+                    return None
+
+                THEME_PHRASES = [
+                    "my theme is",
+                    "i am a",
+                    "i'm a",
+                    "destiny theme",
+                    "my destiny is",
+                    "theme number",
+                    "my number is",
+                    "explain my theme",
+                    "what does my theme mean",
+                ]
+
+                # ---------------------------------------------------------
+                # If user is explicitly asking about a theme → theme counsel
+                # ---------------------------------------------------------
+                if any(p in user_text.lower() for p in THEME_PHRASES):
+                    match = _match_theme_from_text(user_text)
+                    if match:
+                        theme_num, theme_title = match
+
+                        # Medium-length counsel (Option C)
+                        counsel = (
+                            f"Because your Christ-centered destiny theme is **{theme_title}**, "
+                            "I want to speak directly into that grace.\n\n"
+                            "This theme reflects how God uniquely wired you to reveal Christ through "
+                            "your decisions, your relationships, and your inner posture.\n\n"
+                            "Scripture (Matthew 5:14–16):\n"
+                            "“You are the light of the world… let your light shine before others…”\n\n"
+                            "One practical step:\n"
+                            "Choose **one place this week** — a conversation, a call, or an act of "
+                            "encouragement — where you intentionally let this theme shine. "
+                            "Do it prayerfully, as worship.\n\n"
+                            "Would you like deeper prophetic counsel on this theme?"
+                        )
+
+                        return jsonify({
+                            "messages": [{
+                                "role": "assistant",
+                                "model": "def",
+                                "text": expand_scriptures_in_text(counsel),
+                                "cites": []
+                            }]
+                        }), 200
+
+                # ---------------------------------------------------------
+                # If NOT theme interpretation → return normal DEF MENU
+                # ---------------------------------------------------------
                 k = _def_key(full_name, birthdate)
                 payload = _DEF_CACHE.get(k)
+
                 if not payload:
                     payload = build_pastor_def_chat(full_name, birthdate)
                     _DEF_CACHE[k] = payload
+
                 return jsonify({
                     "messages": [{
                         "role": "assistant",
@@ -8158,8 +8248,11 @@ def chat():
                         "cites": []
                     }]
                 }), 200
+
         except Exception as e:
             logger.exception("DEF menu block failed: %s", e)
+
+
 
         # ── Identity fast-path (e.g., “r u pastor debra?”) ───────────────────
         try:
