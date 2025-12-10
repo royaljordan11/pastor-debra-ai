@@ -486,27 +486,7 @@ def index():
     return send_from_directory(str(BASE_DIR), "Pastor.html")
 
 
-# Prefer MP4 for inline playback; keep .mov as a fallback
-@app.route("/mom.mp4")
-def serve_mom_mp4():
-    return send_from_directory(
-        str(BASE_DIR),
-        "mom.mp4",
-        mimetype="video/mp4",
-        as_attachment=False,
-        conditional=True,
-    )
 
-
-@app.route("/mom.mov")
-def serve_mom_mov():
-    return send_from_directory(
-        str(BASE_DIR),
-        "mom.mov",
-        mimetype="video/quicktime",
-        as_attachment=False,
-        conditional=True,
-    )
 
 
 def _load_destiny_json(path: str):
