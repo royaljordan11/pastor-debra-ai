@@ -8126,8 +8126,6 @@ def chat():
             }), 200
 
         # ── Prophetic fast-path (theme-based, for UI “Ask Prophetic” button) ───
-        # Only use this when intent is "prophetic" BUT the user did NOT type
-        # an explicit prophecy request (those are handled later inside gpt_answer).
         try:
             if intent_now == "prophetic" and not PROPHECY_KEYWORDS.search(user_text or ""):
                 full_name = (data.get("name") or data.get("full_name") or "").strip()
@@ -8343,19 +8341,39 @@ def chat():
         # ── Generate ───────────────────────────────────────────────────────────
         try:
             if model_choice == "t5":
+                # *** KEY CHANGE ***
+                # Always build the T5-style prompt
                 prompt = build_t5_prompt(user_text, hits_all)
-                out = t5_onnx.generate(prompt, max_new_tokens=160) if t5_onnx.ok else ""
-                if not out:
-                    # you *could* pass comfort_mode / scripture_hint into gpt_answer here too if desired
+
+                if t5_onnx.ok:
+                    # Normal ONNX path (for local / future bigger server)
+                    out = t5_onnx.generate(prompt, max_new_tokens=160) or ""
+                else:
+                    # ONNX not available (e.g., Railway prelaunch) – route the
+                    # *same* T5 prompt into GPT so GPT follows T5 logic.
+                    logger.warning("T5 requested but ONNX unavailable; sending T5-style prompt to GPT.")
                     out = gpt_answer(
-                        user_text,
+                        prompt,           # use the composed T5 prompt as the "user text"
                         hits_all,
                         no_cache=no_cache,
                         comfort_mode=comfort_mode,
                         scripture_hint=scripture_hint,
                         history=recent_history,
                     )
+
+                if not out:
+                    # Extra safety: if something still fails, do one more GPT call.
+                    out = gpt_answer(
+                        prompt,
+                        hits_all,
+                        no_cache=no_cache,
+                        comfort_mode=comfort_mode,
+                        scripture_hint=scripture_hint,
+                        history=recent_history,
+                    )
+
                 out = expand_scriptures_in_text(out)
+                # For the frontend you can still label it as "t5"
                 resp = {"role": "assistant", "model": "t5", "text": out, "cites": cites}
 
             elif model_choice == "gpt":
@@ -8402,7 +8420,6 @@ def chat():
                 "text": "Something went wrong. Let’s try again."
             }]
         }), 200
-
 
 
 # ────────── Ops ──────────
