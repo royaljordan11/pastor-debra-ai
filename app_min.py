@@ -56,10 +56,6 @@ TOKENIZER_ZIP_URL = (os.getenv("TOKENIZER_ZIP_URL") or "").strip()
 
 
 
-else:
-    # Original ONNX setup continues ONLY when ENABLE_ONNX = TRUE
-    def t5_enabled():
-        return ONNX_MODEL_PATH.exists()
 
 
 
