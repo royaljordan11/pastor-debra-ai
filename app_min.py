@@ -375,10 +375,11 @@ ONNX_SESSION = None  # will become an onnxruntime.InferenceSession after init
 
 # 1) ONNX session (always refresh from remote)
 try:
-    # Always re-download/extract model.onnx from ONNX_ZIP_URL
+    # Always re-download/extract model.onnx from ONNX_ZIP_URL on startup
     ensure_onnx_from_zip()
 
     if ONNX_MODEL_PATH.exists():
+        logger.info("Initializing ONNX session from %s", ONNX_MODEL_PATH)
         ONNX_SESSION = ort.InferenceSession(
             str(ONNX_MODEL_PATH),
             providers=["CPUExecutionProvider"],
@@ -396,7 +397,6 @@ try:
 except Exception as e:
     ONNX_SESSION = None
     logger.warning("Failed to initialize ONNX session: %s", e)
-
 
 def _maybe_init_tokenizer() -> None:
     """
