@@ -7310,9 +7310,9 @@ distress_keywords = [
     "hurt", "in trouble", "messed up", "screwed", "lost", "depressed", "crying",
 ]
 
-def _is_distress(text):
-    t = (text or "").lower()
-    return any(k in t for k in distress_keywords)
+def is_in_distress(user_text):
+    return False
+
 
 
 
