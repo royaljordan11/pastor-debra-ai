@@ -660,15 +660,43 @@ function insertDestinyToChat(){
 
   const opener = name ? `My name is ${name}` : `Hi`;
   const dobText = dob ? ` (DOB ${dob})` : '';
-  const msg = `${opener}${dobText}. My Christ-centered destiny theme is “${themeLabel}.” Pastor Debra, would you give me personal counsel with one Scripture and one practical step?\n\n${entry ? entry.answer : ''}`;
-  sendChat(msg);
+
+  const userPrompt =
+    `${opener}${dobText}. My Christ-centered destiny theme is “${themeLabel}.” ` +
+    `Pastor Debra, would you give me personal counsel with one Scripture and one practical step?`;
+
+  // ⭐ NEW: force DEF mode
+  const payload = {
+    messages: [{ role: "user", text: userPrompt }],
+    name,
+    birthdate: dob,
+    def_chat: true    // <<< REQUIRED for destiny counsel
+  };
+
+  addMessage('user', userPrompt);
+  messages.push({ role: 'user', text: userPrompt });
+  
+  showTyping();
+  sending = true;
+  qs('#sendBtn').setAttribute('disabled','true');
+
+  fetchJSON('/chat', { method:'POST', body: JSON.stringify(payload) })
+    .then(data => {
+      hideTyping();
+      const msg = data.messages?.[0] || { text: '(no response)' };
+      addMessage('assistant', msg.text, msg.cites || []);
+      messages.push({ role:'assistant', text: msg.text });
+    })
+    .catch(e => {
+      hideTyping();
+      addMessage('assistant', "Error retrieving destiny counsel.\n" + e.message);
+    })
+    .finally(() => {
+      sending = false;
+      qs('#sendBtn').removeAttribute('disabled');
+    });
 }
 
-function copyTheme(){
-  const txt=(document.getElementById('themeAnswer').textContent||'').trim();
-  if(!txt) return;
-  navigator.clipboard.writeText(txt).then(()=> toast('Guidance copied.'));
-}
 
 /* ---------- Local storage for profile ---------- */
 function saveProfile(){
