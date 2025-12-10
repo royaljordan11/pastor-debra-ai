@@ -54,6 +54,23 @@ ENABLE_ONNX = os.getenv("ENABLE_ONNX", "true").strip().lower() in ("1", "true", 
 ONNX_ZIP_URL = (os.getenv("ONNX_ZIP_URL") or "").strip()
 TOKENIZER_ZIP_URL = (os.getenv("TOKENIZER_ZIP_URL") or "").strip()
 
+# ------------------ ONNX BYPASS CONTROL ------------------
+# If ENABLE_ONNX is FALSE, we skip ALL ONNX logic immediately.
+if not ENABLE_ONNX:
+    logger.warning("ENABLE_ONNX = FALSE → Skipping all ONNX/T5 loading.")
+    ONNX_MODEL_PATH = None
+    T5_SESSION = None
+    TOKENIZER = None
+
+    def t5_enabled():
+        return False
+
+else:
+    # Original ONNX setup continues ONLY when ENABLE_ONNX = TRUE
+    def t5_enabled():
+        return ONNX_MODEL_PATH.exists()
+
+
 
 # ────────── Small helpers ──────────
 def _get_bool(env_key: str, default: bool) -> bool:
@@ -8161,9 +8178,9 @@ def get_videos():
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
-        # ─────────────────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────────────────
         # 0) RATE-LIMIT
-        # ─────────────────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────────────────
         ip = (request.headers.get("X-Forwarded-For", request.remote_addr or "0.0.0.0")
               .split(",")[0].strip())
         if _throttle(ip):
@@ -8177,13 +8194,13 @@ def chat():
                 }]
             }), 429
 
-        # ─────────────────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────────────────
         # 1) SAFE PAYLOAD PARSE
-        # ─────────────────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────────────────
         data = request.get_json(force=False, silent=True) or {}
-        print("🟦 CHAT PAYLOAD:", data)   # <— ADD THIS LINE
+        print("🟦 CHAT PAYLOAD:", data)
+
         msgs = data.get("messages", [])
-        active_model = (data.get("active_model") or "auto").strip().lower()
         no_cache = bool(data.get("no_cache"))
 
         if not isinstance(msgs, list):
@@ -8214,36 +8231,20 @@ def chat():
                 }]
             }), 200
 
-        # Normalize lower version for detection
+        # Normalize
         t_norm = _normalize_simple(user_text or "")
 
         # Extract profile data
-        full_name = (
-            data.get("name") or
-            data.get("full_name") or ""
-        ).strip()
+        full_name = (data.get("name") or data.get("full_name") or "").strip()
+        birthdate = (data.get("dob") or data.get("birthdate") or "").strip()
 
-        birthdate = (
-            data.get("dob") or
-            data.get("birthdate") or ""
-        ).strip()
-
-        # ─────────────────────────────────────────────────────────────────────
-        # 2) UNIFIED DESTINY THEME FAST-PATH  (OPTION A)
-        # ─────────────────────────────────────────────────────────────────────
-        # DESTINY THEME FAST-PATH (FINAL VERSION)
-        # Highest priority. Always returns theme-specific counsel.
-        # ─────────────────────────────────────────────────────────────────────
-
-        # 1. Detect theme in user text
+        # ────────────────────────────────────────────────────────────
+        # 2) DESTINY THEME FAST-PATH
+        # ────────────────────────────────────────────────────────────
         match = match_theme_from_text(user_text)
 
-        # 2. Calculate theme from name (fallback)
-        name_theme = None
-        if full_name:
-            name_theme = destiny_theme_for_name(full_name)
+        name_theme = destiny_theme_for_name(full_name) if full_name else None
 
-        # Decide final theme
         if match:
             theme_num, theme_title = match
             theme_meaning = DESTINY_THEME_MEANINGS.get(theme_num)
@@ -8253,7 +8254,6 @@ def chat():
         else:
             final_theme = None
 
-        # Trigger phrases
         theme_triggered = (
             any(p in t_norm for p in THEME_PHRASES) or
             bool(data.get("def_chat")) or
@@ -8262,7 +8262,6 @@ def chat():
 
         if theme_triggered and final_theme:
             theme_num, theme_title, theme_meaning = final_theme
-
             out = build_theme_counsel(theme_num, theme_title, theme_meaning)
 
             try:
@@ -8280,10 +8279,9 @@ def chat():
                 }]
             }), 200
 
-
-        # ─────────────────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────────────────
         # 3) P.O.M.E FAST-PATH
-        # ─────────────────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────────────────
         try:
             if POME_RX.search(user_text or ""):
                 msg = (
@@ -8302,9 +8300,9 @@ def chat():
         except Exception:
             pass
 
-        # ─────────────────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────────────────
         # 4) IDENTITY FAST-PATH
-        # ─────────────────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────────────────
         try:
             if IDENTITY_PAT.search(user_text):
                 return jsonify({
@@ -8318,17 +8316,17 @@ def chat():
         except Exception:
             pass
 
-        # ─────────────────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────────────────
         # 5) INTENT DETECTION
-        # ─────────────────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────────────────
         try:
             intent_now = detect_intent(user_text)
         except Exception:
             intent_now = "general"
 
-        # ─────────────────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────────────────
         # 6) DONATION HARD STOP
-        # ─────────────────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────────────────
         if intent_now == "donation":
             donation_msg = answer_pastor_debra_faq(user_text) or (
                 "Yes—our house sowed an $8M gift..."
@@ -8343,9 +8341,9 @@ def chat():
                 }]
             }), 200
 
-        # ─────────────────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────────────────
         # 7) ADVICE FAST-PATH
-        # ─────────────────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────────────────
         if intent_now == "advice":
             try:
                 category = _advice_category(user_text)
@@ -8356,11 +8354,13 @@ def chat():
                 theme_guess = _maybe_theme_from_profile(full_name, birthdate)
                 out = build_pastoral_counsel(category, theme_guess)
                 out = expand_scriptures_in_text(out)
+
                 try:
                     hits_all = blended_search(user_text)
                     cites = format_cites(filter_hits_for_context(hits_all, "advice"))
                 except Exception:
                     cites = []
+
                 return jsonify({
                     "messages": [{
                         "role": "assistant",
@@ -8370,18 +8370,20 @@ def chat():
                     }]
                 }), 200
 
-        # ─────────────────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────────────────
         # 8) PROPHETIC FAST-PATH
-        # ─────────────────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────────────────
         if intent_now == "prophetic" and not PROPHECY_KEYWORDS.search(user_text or ""):
             theme_guess = _maybe_theme_from_profile(full_name, birthdate)
             out = build_prophetic_word(full_name, birthdate, theme_guess)
             out = expand_scriptures_in_text(out)
+
             try:
                 hits_all = blended_search(user_text)
                 cites = format_cites(filter_hits_for_context(hits_all, "prophetic"))
             except Exception:
                 cites = []
+
             return jsonify({
                 "messages": [{
                     "role": "assistant",
@@ -8391,9 +8393,9 @@ def chat():
                 }]
             }), 200
 
-        # ─────────────────────────────────────────────────────────────────────
-        # 9) FACES-OF-EVE / BOOKS
-        # ─────────────────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────────────────
+        # 9) FACES OF EVE / BOOK FAST-PATH
+        # ────────────────────────────────────────────────────────────
         try:
             maybe_faces = answer_faces_of_eve_or_books(user_text)
             if maybe_faces:
@@ -8413,9 +8415,9 @@ def chat():
         except Exception:
             pass
 
-        # ─────────────────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────────────────
         # 10) GENERAL FAQ
-        # ─────────────────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────────────────
         try:
             faq_reply = answer_pastor_debra_faq(user_text)
             if faq_reply:
@@ -8430,21 +8432,20 @@ def chat():
         except Exception:
             pass
 
-        # ─────────────────────────────────────────────────────────────────────
-        # 11) RETRIEVAL + GPT/T5 GENERATION
-        # ─────────────────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────────────────
+        # 11) RETRIEVAL & GPT GENERATION (CLEAN GPT-ONLY ROUTER)
+        # ────────────────────────────────────────────────────────────
         try:
             hits_all = blended_search(user_text)
             hits_ctx = filter_hits_for_context(hits_all, intent_now)
             cites = format_cites(hits_ctx)
         except Exception:
-            hits_all = []
+            hits_ctx = []
             cites = []
 
-        # comfort detection
         comfort_mode = is_in_distress(user_text)
 
-        # Scripture hint logic
+        # Scripture hint
         topic = None
         if SHAME_RX.search(user_text): topic = "shame_guilt"
         elif FEAR_RX.search(user_text): topic = "fear_anxiety"
@@ -8457,7 +8458,7 @@ def chat():
                 scripture_hint = chosen
                 session["last_scripture_ref"] = chosen["ref"]
 
-        # Build recent history
+        # Build small recent history
         recent_history = []
         try:
             for m in msgs[-6:]:
@@ -8470,102 +8471,41 @@ def chat():
         except Exception:
             pass
 
-        # Model selection
-        try:
-            if not OPENAI_API_KEY and not getattr(t5_onnx, "ok", False):
-                model_choice = "fallback"
-            else:
-                if intent_now == "prophetic" and PROPHECY_KEYWORDS.search(user_text or ""):
-                    model_choice = "gpt"
-                elif active_model in ("t5", "gpt"):
-                    model_choice = active_model
-                else:
-                    model_choice = choose_model(user_text, hits_all, getattr(t5_onnx, "ok", False))
-        except Exception:
-            model_choice = "fallback"
+        # ────────────────────────────────────────────────────────────
+        # ⭐⭐ GPT-ONLY MODEL ROUTER — ONNX/T5 COMPLETELY DISABLED ⭐⭐
+        # ────────────────────────────────────────────────────────────
 
-        # GENERATION
-        try:
-            if model_choice == "t5":
-                prompt = build_t5_prompt(user_text, hits_all)
-                out = ""
-                if getattr(t5_onnx, "ok", False):
-                    try:
-                        out = t5_onnx.generate(prompt, max_new_tokens=160)
-                    except Exception:
-                        out = ""
-                if not out and OPENAI_API_KEY:
-                    out = gpt_answer(
-                        prompt, hits_all,
-                        no_cache=no_cache,
-                        comfort_mode=comfort_mode,
-                        scripture_hint=scripture_hint,
-                        history=recent_history,
-                    )
-                if not out and OPENAI_API_KEY:
-                    out = gpt_answer(
-                        user_text, hits_all,
-                        no_cache=no_cache,
-                        comfort_mode=comfort_mode,
-                        scripture_hint=scripture_hint,
-                        history=recent_history,
-                    )
-                if not out:
-                    out = (
-                        "Let’s invite the Lord into this moment. Scripture: Matthew 11:28\n"
-                        "Prayer: Jesus, steady our hearts. Amen."
-                    )
-                out = expand_scriptures_in_text(out)
-                resp = {"role": "assistant", "model": "t5", "text": out, "cites": cites}
+        out = gpt_answer(
+            user_text,
+            hits_ctx,
+            no_cache=no_cache,
+            comfort_mode=comfort_mode,
+            scripture_hint=scripture_hint,
+            history=recent_history,
+        )
+        out = expand_scriptures_in_text(out)
 
-            elif model_choice == "gpt" and OPENAI_API_KEY:
-                out = gpt_answer(
-                    user_text, hits_all,
-                    no_cache=no_cache,
-                    comfort_mode=comfort_mode,
-                    scripture_hint=scripture_hint,
-                    history=recent_history,
-                )
-                out = expand_scriptures_in_text(out)
-                resp = {"role": "assistant", "model": "gpt", "text": out, "cites": cites}
+        resp = {
+            "role": "assistant",
+            "model": "gpt",
+            "text": out,
+            "cites": cites,
+        }
 
-            else:
-                safe = (
-                    "Let’s invite the Lord into this moment. Scripture: Matthew 11:28\n"
-                    "Prayer: Jesus, steady our hearts. Amen."
-                )
-                resp = {
-                    "role": "assistant",
-                    "model": "fallback",
-                    "text": expand_scriptures_in_text(safe),
-                    "cites": cites,
-                }
-
-            return jsonify({"messages": [resp]}), 200
-
-        except Exception:
-            safe = (
-                "Let’s invite the Lord into this moment. Scripture: Matthew 11:28\n"
-                "Prayer: Jesus, steady our hearts. Amen."
-            )
-            return jsonify({
-                "messages": [{
-                    "role": "assistant",
-                    "model": "sys",
-                    "text": expand_scriptures_in_text(safe)
-                }]
-            }), 200
+        return jsonify({"messages": [resp]}), 200
 
     except Exception:
+        safe = (
+            "Let’s invite the Lord into this moment. Scripture: Matthew 11:28\n"
+            "Prayer: Jesus, steady our hearts. Amen."
+        )
         return jsonify({
             "messages": [{
                 "role": "assistant",
                 "model": "sys",
-                "text": "Something went wrong. Let’s try again."
+                "text": expand_scriptures_in_text(safe)
             }]
         }), 200
-
-
 
 
 # ────────── Ops ──────────
