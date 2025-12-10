@@ -103,22 +103,29 @@
 </head>
 <body>
 
-<!-- INTRO OVERLAY -->
+<!-- INTRO OVERLAY (YouTube Only) -->
 <div id="intro" class="intro-wrap" aria-label="Intro video">
   <div class="intro-inner">
     <span class="caption">Welcome • Pastor Debra Jordan</span>
-    <video id="introVideo" class="intro-video" autoplay muted playsinline preload="auto" controls controlsList="nodownload noplaybackrate">
-      <source src="mom.mp4" type="video/mp4" />
-      <source src="mom.mov" type="video/quicktime" />
-      Your browser does not support the video tag.
-    </video>
+
+    <!-- YouTube Intro Video -->
+    <iframe 
+      id="introIframe"
+      class="intro-video"
+      src="https://www.youtube.com/embed/WaNaM_OXxA4?autoplay=1&mute=1&modestbranding=1&rel=0"
+      allow="autoplay; encrypted-media"
+      allowfullscreen>
+    </iframe>
+
     <div class="intro-topbar">
       <span></span>
       <button id="skipIntro" class="skip-btn" type="button">Skip Intro</button>
     </div>
-    <button id="introCatch" class="intro-catch" title="Enter" aria-label="Enter"></button>
+
+    <button id="introCatch" class="intro-catch" title="Enter"></button>
   </div>
 </div>
+
 
 <header class="app-header">
   <div class="brand">
@@ -276,9 +283,15 @@ function unlockOff(){
   window.removeEventListener('wheel',      revealApp, opts);
 }
 
-skipIntro.addEventListener('click', revealApp);
-introVideo.addEventListener('ended', revealApp);
-unlockOn();
+const introIframe = document.getElementById("introIframe");
+
+document.getElementById("skipIntro").addEventListener("click", revealApp);
+document.getElementById("introCatch").addEventListener("click", revealApp);
+
+// YouTube cannot fire "ended", so we remove that listener completely.
+
+unlockOn();   // KEEP THIS LINE EXACTLY WHERE IT WAS
+
 
 /* ---------- Utils ---------- */
 const qs = s=>document.querySelector(s);
