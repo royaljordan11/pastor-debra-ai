@@ -7570,6 +7570,86 @@ def gpt_answer(
             msg = answer_relational_test_question(user_text)
             return _record_and_return(user_text, msg)
 
+        # ── Ask-Pastor-Debra (right-side destiny theme counsel) fast-path ─────
+        ASK_THEME_RX = re.compile(
+            r"christ[- ]centered destiny theme|ask pastor debra about this|would you give me personal counsel",
+            re.IGNORECASE,
+        )
+
+        try:
+            # This catches the auto-text from the right-side "Ask Pastor Debra" button
+            if ASK_THEME_RX.search(user_text or ""):
+                full_name = (data.get("name") or data.get("full_name") or "").strip()
+                birthdate = (data.get("birthdate") or data.get("dob") or "").strip()
+                theme_guess = _maybe_theme_from_profile(full_name, birthdate)
+
+                # theme_guess is usually (num, title, meaning)
+                theme_num = None
+                theme_title = None
+                theme_meaning = None
+                if isinstance(theme_guess, tuple) and len(theme_guess) >= 2:
+                    theme_num = theme_guess[0]
+                    theme_title = theme_guess[1]
+                    if len(theme_guess) >= 3:
+                        theme_meaning = theme_guess[2]
+
+                if not theme_title:
+                    theme_title = "your God-given theme"
+
+                # Try your existing helper first (this preserves your T5 / theme logic)
+                out = None
+                try:
+                    out = build_pastoral_counsel("calling", theme_guess)
+                except Exception as e:
+                    logger.warning("build_pastoral_counsel('calling', theme_guess) failed: %s", e)
+                    out = None
+
+                # If that fails or returns nothing, build a guaranteed answer
+                if not out:
+                    scripture = (
+                        "Scripture (Matthew 5:14–16): "
+                        "“You are the light of the world… let your light shine before others…”"
+                    )
+                    step = (
+                        "One practical step: write down one place this week where you sense God is "
+                        "asking you to “turn on the light” — a conversation, a phone call, an act "
+                        "of encouragement — and do it prayerfully, as worship."
+                    )
+
+                    intro = (
+                        f"My name is Pastor Debra Jordan. Because your Christ-centered destiny "
+                        f"theme is **{theme_title}**, I want to speak to you as someone who carries "
+                        f"that grace. This theme points to how God wired you to reflect Christ.\n\n"
+                    )
+                    if theme_meaning:
+                        intro += f"**What this theme whispers:** {theme_meaning.capitalize()}.\n\n"
+
+                    out = intro + scripture + "\n\n" + step
+
+                out = expand_scriptures_in_text(out)
+
+                # Optional cites
+                try:
+                    hits_all = blended_search(user_text)
+                    hits_ctx = filter_hits_for_context(hits_all, "advice")
+                    cites = format_cites(hits_ctx)
+                except Exception:
+                    cites = []
+
+                return jsonify({
+                    "messages": [{
+                        "role": "assistant",
+                        "model": "advice",
+                        "text": out,
+                        "cites": cites,
+                    }]
+                }), 200
+
+        except Exception as e:
+            logger.exception("Ask-Pastor-Debra fast-path failed: %s", e)
+            # If this fails, we just fall through to normal routing
+
+    
     # ---------------------------------------------------------------------
     # 1) OCCULT FILTER
     # ---------------------------------------------------------------------
