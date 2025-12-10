@@ -8167,6 +8167,7 @@ def chat():
             logger.exception("Prophetic fast-path failed: %s", e)
 
         # ── Advice fast-path (ONLY when intent is 'advice') ──────────────────
+        # ── Advice fast-path (ONLY when intent is 'advice') ────────────────────
         def _has_donation_cues(s: str) -> bool:
             try:
                 t = _normalize_simple(s or "")
@@ -8175,15 +8176,31 @@ def chat():
             DONATE = r"(?:donat(?:e|ed)|giv(?:e|en|ing)|gift(?:ed)?|seed(?:ed)?)"
             EIGHTM = r"(?:8\s*[,\.]?\s*m(?:illion)?|eight\s+million|\$?\s*8[, ]?0{3}[, ]?0{3})"
             SCHOOL = r"(?:virginia(?:\s*union)?\s*(?:university)?|vuu)"
-            return bool(re.search(DONATE, t, re.I) or re.search(EIGHTM, t, re.I) or re.search(SCHOOL, t, re.I))
+            return bool(re.search(DONATE, t, re.I) or
+                        re.search(EIGHTM, t, re.I) or
+                        re.search(SCHOOL, t, re.I))
+
+        # extra regex to detect the "Ask Pastor Debra about my destiny theme" text
+        ASK_THEME_RX = re.compile(
+            r"christ[- ]centered destiny theme|would you give me personal counsel",
+            re.IGNORECASE,
+        )
 
         category = None
         if intent_now == "advice" and not _has_donation_cues(user_text):
             try:
-                category = _advice_category(user_text)
+                # normal classifier first
+                category = _advice_category(user_text)  # "anxiety","marriage","calling","week", etc.
             except Exception as e:
                 logger.warning("_advice_category failed: %s", e)
                 category = None
+
+            # NEW: if classifier didn't recognise it, but it looks like the
+            # "Ask Pastor Debra about this theme" button, treat it as "calling"
+            if category is None and ASK_THEME_RX.search(user_text or ""):
+                category = "calling"
+                logger.debug("advice_category override='calling' for Ask-Theme pattern")
+
             logger.debug("advice_category=%s", category)
 
         if category:
@@ -8192,9 +8209,13 @@ def chat():
                 birthdate = (data.get("birthdate") or data.get("dob") or "").strip()
                 theme_guess = _maybe_theme_from_profile(full_name, birthdate)
 
+                # Base Pastor Debra counsel text (one scripture + one step)
                 out = build_pastoral_counsel(category, theme_guess)
+
+                # You can still let the scripture expander run
                 out = expand_scriptures_in_text(out)
 
+                # Optional cites for UI
                 try:
                     hits_all = blended_search(user_text)
                     hits_ctx = filter_hits_for_context(hits_all, "advice")
@@ -8212,6 +8233,8 @@ def chat():
                 }), 200
             except Exception as e:
                 logger.exception("Advice fast-path failed: %s", e)
+                # fall through to normal routing if something breaks
+
 
         # --- Faces-of-Eve / Books fast-path (JSON-backed) --------------------
         try:
