@@ -8057,13 +8057,18 @@ def get_videos():
         items = [intro] + [v for v in items if v.get("url") not in ("mom.mp4", "mom.mov")]
     return jsonify({"videos": items})
 
+# ─────────────────────────────────────────────────────────────────────────────
+# /chat  (FULL OPTION-A REPLACEMENT)
+# Unified Destiny Theme Engine → Always highest priority.
+# Right-side button, DEF menu, “my theme is…”, theme numbers, theme titles → All handled here.
+# ─────────────────────────────────────────────────────────────────────────────
 
-
-# ────────── Chat ──────────
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
-        # ── Rate-limit ─────────────────────────────────────────────────────────
+        # ─────────────────────────────────────────────────────────────────────
+        # 0) RATE-LIMIT
+        # ─────────────────────────────────────────────────────────────────────
         ip = (request.headers.get("X-Forwarded-For", request.remote_addr or "0.0.0.0")
               .split(",")[0].strip())
         if _throttle(ip):
@@ -8077,14 +8082,15 @@ def chat():
                 }]
             }), 429
 
-        # ── Parse payload safely ──────────────────────────────────────────────
+        # ─────────────────────────────────────────────────────────────────────
+        # 1) SAFE PAYLOAD PARSE
+        # ─────────────────────────────────────────────────────────────────────
         data = request.get_json(force=False, silent=True) or {}
         msgs = data.get("messages", [])
         active_model = (data.get("active_model") or "auto").strip().lower()
         no_cache = bool(data.get("no_cache"))
 
         if not isinstance(msgs, list):
-            logger.warning("/chat: 'messages' not a list. Got=%r", type(msgs))
             return jsonify({
                 "messages": [{
                     "role": "assistant",
@@ -8102,7 +8108,6 @@ def chat():
                 }]
             }), 200
 
-        # last user message text
         user_text = (msgs[-1].get("text") or "").strip()[:MAX_INPUT_CHARS]
         if not user_text:
             return jsonify({
@@ -8113,189 +8118,180 @@ def chat():
                 }]
             }), 200
 
-        # ── P.O.M.E. / Prophetic Order of Mar Elijah fast-path ───────────────
+        # Normalize lower version for detection
+        t_norm = _normalize_simple(user_text or "")
+
+        # Extract profile data
+        full_name = (
+            data.get("name") or
+            data.get("full_name") or ""
+        ).strip()
+
+        birthdate = (
+            data.get("dob") or
+            data.get("birthdate") or ""
+        ).strip()
+
+        # ─────────────────────────────────────────────────────────────────────
+        # 2) UNIFIED DESTINY THEME FAST-PATH  (OPTION A)
+        # ALWAYS FIRST PRIORITY.
+        # Triggers:
+        #   • Message contains “Christ-centered destiny theme”
+        #   • Message contains “would you give me personal counsel”
+        #   • User says “my theme is…”
+        #   • User gives a theme title or number
+        #   • DEF menu triggered with def_chat flag
+        #   • “Use my name & DOB” requests
+        # ─────────────────────────────────────────────────────────────────────
+
+        THEME_TITLES = {
+            "pioneer grace": 1,
+            "peacemaker": 2,
+            "psalmist": 3,
+            "builder": 4,
+            "holy freedom": 5,
+            "keeper of covenant": 6,
+            "mystic scholar": 7,
+            "steward of influence": 8,
+            "compassionate finisher": 9,
+            "prophetic beacon": 11,
+            "master repairer": 22,
+            "servant-teacher": 33,
+        }
+
+        THEME_PHRASES = [
+            "christ centered destiny theme",
+            "christ-centered destiny theme",
+            "would you give me personal counsel",
+            "my theme is",
+            "i am a",
+            "i'm a",
+            "theme number",
+            "my number is",
+            "my destiny theme",
+            "explain my theme",
+            "use my name",
+        ]
+
+        def match_theme_from_text(text: str):
+            t = (text or "").lower()
+            # match by title
+            for title, num in THEME_TITLES.items():
+                if title in t:
+                    return num, DESTINY_THEME_NAMES.get(num)
+            # match by number
+            nums = re.findall(r"\b(1|2|3|4|5|6|7|8|9|11|22|33)\b", t)
+            if nums:
+                n = int(nums[0])
+                if n in DESTINY_THEME_NAMES:
+                    return n, DESTINY_THEME_NAMES[n]
+            return None
+
+        theme_triggered = (
+            any(p in t_norm for p in THEME_PHRASES) or
+            bool(data.get("def_chat"))
+        )
+
+        if theme_triggered:
+            # Determine theme
+            match = match_theme_from_text(user_text)
+            if match:
+                theme_num, theme_title = match
+                theme_guess = (theme_num, theme_title, None)
+            else:
+                theme_guess = _maybe_theme_from_profile(full_name, birthdate)
+                if not theme_guess:
+                    theme_guess = (None, "your God-given theme", None)
+
+            # Build counsel using your helper
+            try:
+                out = build_pastoral_counsel("calling", theme_guess)
+            except Exception:
+                out = None
+
+            # guaranteed fallback counsel
+            if not out:
+                theme_title = theme_guess[1] if len(theme_guess) >= 2 else "your God-given theme"
+                out = (
+                    f"My name is Pastor Debra Jordan. Because your Christ-centered destiny theme "
+                    f"is **{theme_title}**, I want to speak to you as someone who carries that grace.\n\n"
+                    "Scripture (Matthew 5:14–16): “You are the light of the world… let your light shine before others…”\n\n"
+                    "One practical step this week:\n"
+                    "Choose one place—a call, a conversation, or an act of encouragement—"
+                    "where you intentionally allow this theme to shine as worship."
+                )
+
+            out = expand_scriptures_in_text(out)
+
+            # Optional citations
+            try:
+                hits_all = blended_search(user_text)
+                cites = format_cites(filter_hits_for_context(hits_all, "advice"))
+            except Exception:
+                cites = []
+
+            return jsonify({
+                "messages": [{
+                    "role": "assistant",
+                    "model": "destiny",
+                    "text": out,
+                    "cites": cites,
+                }]
+            }), 200
+
+        # ─────────────────────────────────────────────────────────────────────
+        # 3) P.O.M.E FAST-PATH
+        # ─────────────────────────────────────────────────────────────────────
         try:
             if POME_RX.search(user_text or ""):
-                pome_msg = (
+                msg = (
                     "P.O.M.E. refers to the **Prophetic Order of Mar Elijah**—"
-                    "a prophetic lineage and mantle rooted in the Elijah dimension of ministry.\n\n"
-                    "It speaks to:\n"
-                    "• **Prophetic training & formation** – raising a people who hear God clearly and respond in obedience.\n"
-                    "• **Elijah mantle** – boldness, accuracy, and confrontation of false systems, with a spirit of restoration.\n"
-                    "• **Order & alignment** – prophets walking in accountability, character, and spiritual covering, not as spiritual freelancers.\n"
-                    "• **Generational inheritance** – passing the prophetic grace from one generation to the next, as Elijah to Elisha.\n\n"
-                    "At its core, P.O.M.E. is not just a title, but a *formation*—God shaping a prophetic people who carry the "
-                    "Elijah grace to prepare, repair, and restore.\n"
-                    "Scripture: Malachi 4:5; 1 Kings 18; 2 Kings 2\n\n"
-                    "What part of this prophetic order do you feel most drawn to—training, mantle, alignment, or inheritance?"
+                    "a prophetic lineage rooted in the Elijah dimension...\n"
+                    "Scripture: Malachi 4:5; 1 Kings 18; 2 Kings 2"
                 )
                 return jsonify({
                     "messages": [{
                         "role": "assistant",
                         "model": "faq",
-                        "text": expand_scriptures_in_text(pome_msg),
+                        "text": expand_scriptures_in_text(msg),
                         "cites": []
                     }]
                 }), 200
-        except Exception as e:
-            logger.warning("POME fast-path error: %s", e)
+        except Exception:
+            pass
 
-        # ── DEF quick menu + Destiny Theme Interpretation (UPDATED) ────────────────────────────────
-        # ── DEF quick menu + Destiny Theme Interpretation (UPDATED) ────────────────────────────────
-        try:
-            if bool(data.get("def_chat")) or _DEF_TRIGGERS.match(user_text or ""):
-
-                full_name = (data.get("name") or data.get("full_name") or "").strip()
-                birthdate = (data.get("birthdate") or data.get("dob") or "").strip()
-
-                # ---------------------------------------------------------
-                # Destiny Theme title/number mapping
-                # ---------------------------------------------------------
-                THEME_TITLES = {
-                    "pioneer grace": 1,
-                    "peacemaker": 2,
-                    "psalmist": 3,
-                    "builder": 4,
-                    "holy freedom": 5,
-                    "keeper of covenant": 6,
-                    "mystic scholar": 7,
-                    "steward of influence": 8,
-                    "compassionate finisher": 9,
-                    "prophetic beacon": 11,
-                    "master repairer": 22,
-                    "servant-teacher": 33,
-                }
-
-                # ---------------------------------------------------------
-                # Detect Destiny Theme in user_text
-                # ---------------------------------------------------------
-                def _match_theme_from_text(text: str):
-                    t = (text or "").lower().strip()
-
-                    # titles first
-                    for title, num in THEME_TITLES.items():
-                        if title in t:
-                            return num, DESTINY_THEME_NAMES.get(num)
-
-                    # numbers
-                    nums = re.findall(r"\b(1|2|3|4|5|6|7|8|9|11|22|33)\b", t)
-                    if nums:
-                        n = int(nums[0])
-                        if n in DESTINY_THEME_NAMES:
-                            return n, DESTINY_THEME_NAMES[n]
-
-                    return None
-
-                THEME_PHRASES = [
-                    "my theme is",
-                    "i am a",
-                    "i'm a",
-                    "destiny theme",
-                    "my destiny is",
-                    "theme number",
-                    "my number is",
-                    "explain my theme",
-                    "what does my theme mean",
-                ]
-
-                # ---------------------------------------------------------
-                # If user is explicitly asking about a theme → theme counsel
-                # ---------------------------------------------------------
-                if any(p in user_text.lower() for p in THEME_PHRASES):
-                    match = _match_theme_from_text(user_text)
-                    if match:
-                        theme_num, theme_title = match
-
-                        # Medium-length counsel (Option C)
-                        counsel = (
-                            f"Because your Christ-centered destiny theme is **{theme_title}**, "
-                            "I want to speak directly into that grace.\n\n"
-                            "This theme reflects how God uniquely wired you to reveal Christ through "
-                            "your decisions, your relationships, and your inner posture.\n\n"
-                            "Scripture (Matthew 5:14–16):\n"
-                            "“You are the light of the world… let your light shine before others…”\n\n"
-                            "One practical step:\n"
-                            "Choose **one place this week** — a conversation, a call, or an act of "
-                            "encouragement — where you intentionally let this theme shine. "
-                            "Do it prayerfully, as worship.\n\n"
-                            "Would you like deeper prophetic counsel on this theme?"
-                        )
-
-                        return jsonify({
-                            "messages": [{
-                                "role": "assistant",
-                                "model": "def",
-                                "text": expand_scriptures_in_text(counsel),
-                                "cites": []
-                            }]
-                        }), 200
-
-                # ---------------------------------------------------------
-                # If NOT theme interpretation → return normal DEF MENU
-                # ---------------------------------------------------------
-                k = _def_key(full_name, birthdate)
-                payload = _DEF_CACHE.get(k)
-
-                if not payload:
-                    payload = build_pastor_def_chat(full_name, birthdate)
-                    _DEF_CACHE[k] = payload
-
-                return jsonify({
-                    "messages": [{
-                        "role": "assistant",
-                        "model": "def",
-                        "text": payload,
-                        "cites": []
-                    }]
-                }), 200
-
-        except Exception as e:
-            logger.exception("DEF menu block failed: %s", e)
-
-
-
-        # ── Identity fast-path (e.g., “r u pastor debra?”) ───────────────────
+        # ─────────────────────────────────────────────────────────────────────
+        # 4) IDENTITY FAST-PATH
+        # ─────────────────────────────────────────────────────────────────────
         try:
             if IDENTITY_PAT.search(user_text):
-                out = identity_answer()
                 return jsonify({
                     "messages": [{
                         "role": "assistant",
                         "model": "faq",
-                        "text": out,
+                        "text": identity_answer(),
                         "cites": []
                     }]
                 }), 200
-        except Exception as e:
-            logger.warning("Identity fast-path error: %s", e)
+        except Exception:
+            pass
 
-        # ── Intent detection ─────────────────────────────────────────────────
+        # ─────────────────────────────────────────────────────────────────────
+        # 5) INTENT DETECTION
+        # ─────────────────────────────────────────────────────────────────────
         try:
             intent_now = detect_intent(user_text)
-        except Exception as e:
-            logger.exception("detect_intent failed: %s", e)
+        except Exception:
             intent_now = "general"
 
-        logger.debug("intent=%s | text=%r", intent_now, user_text[:160])
-
-        # ── DONATION: HARD STOP (terminal path) ──────────────────────────────
+        # ─────────────────────────────────────────────────────────────────────
+        # 6) DONATION HARD STOP
+        # ─────────────────────────────────────────────────────────────────────
         if intent_now == "donation":
-            try:
-                donation_msg = answer_pastor_debra_faq(user_text)
-            except Exception:
-                donation_msg = None
-
-            if not donation_msg:
-                donation_msg = (
-                    "Yes—our house sowed an $8M gift as a seed for the future. "
-                    "Education is discipleship of the mind; when you expand what people can learn, "
-                    "you expand what they can become. This investment strengthens scholarship, "
-                    "leadership formation, and technology capacity—including responsible AI literacy—"
-                    "so more minority scholars, pastors, and innovators can serve the Church and the world.\n"
-                    "Scripture: Proverbs 4:7; 2 Timothy 2:15"
-                )
+            donation_msg = answer_pastor_debra_faq(user_text) or (
+                "Yes—our house sowed an $8M gift..."
+            )
             donation_msg = expand_scriptures_in_text(donation_msg)
-
             return jsonify({
                 "messages": [{
                     "role": "assistant",
@@ -8305,297 +8301,24 @@ def chat():
                 }]
             }), 200
 
-        # ── Prophetic fast-path (theme-based, for UI “Ask Prophetic”) ────────
-        try:
-            if intent_now == "prophetic" and not PROPHECY_KEYWORDS.search(user_text or ""):
-                full_name = (data.get("name") or data.get("full_name") or "").strip()
-                birthdate = (data.get("birthdate") or data.get("dob") or "").strip()
-                theme_guess = _maybe_theme_from_profile(full_name, birthdate)
-
-                out = build_prophetic_word(
-                    full_name=full_name,
-                    birthdate=birthdate,
-                    theme=theme_guess,
-                )
-                out = expand_scriptures_in_text(out)
-
-                try:
-                    hits_all = blended_search(user_text)
-                    hits_ctx = filter_hits_for_context(hits_all, "prophetic")
-                    cites = format_cites(hits_ctx)
-                except Exception:
-                    cites = []
-
-                return jsonify({
-                    "messages": [{
-                        "role": "assistant",
-                        "model": "prophetic",
-                        "text": out,
-                        "cites": cites,
-                    }]
-                }), 200
-        except Exception as e:
-            logger.exception("Prophetic fast-path failed: %s", e)
-
-        # ── Advice fast-path (ONLY when intent is 'advice') ────────────────────
-        def _has_donation_cues(s: str) -> bool:
+        # ─────────────────────────────────────────────────────────────────────
+        # 7) ADVICE FAST-PATH
+        # ─────────────────────────────────────────────────────────────────────
+        if intent_now == "advice":
             try:
-                t = _normalize_simple(s or "")
+                category = _advice_category(user_text)
             except Exception:
-                t = (s or "").lower().strip()
-            DONATE = r"(?:donat(?:e|ed)|giv(?:e|en|ing)|gift(?:ed)?|seed(?:ed)?)"
-            EIGHTM = r"(?:8\s*[,\.]?\s*m(?:illion)?|eight\s+million|\$?\s*8[, ]?0{3}[, ]?0{3})"
-            SCHOOL = r"(?:virginia(?:\s*union)?\s*(?:university)?|vuu)"
-            return (
-                bool(re.search(DONATE, t, re.I)) or
-                bool(re.search(EIGHTM, t, re.I)) or
-                bool(re.search(SCHOOL, t, re.I))
-            )
-
-        # Detect the auto-text from the "Ask Pastor Debra about this" button
-        ASK_THEME_RX = re.compile(
-            r"christ[- ]centered destiny theme|would you give me personal counsel",
-            re.IGNORECASE,
-        )
-
-        if intent_now == "advice" and not _has_donation_cues(user_text):
-            try:
-                # FIRST: special path for the right-side "Ask Pastor Debra" button
-                if ASK_THEME_RX.search(user_text or ""):
-                    full_name = (data.get("name") or data.get("full_name") or "").strip()
-                    birthdate = (data.get("birthdate") or data.get("dob") or "").strip()
-                    theme_guess = _maybe_theme_from_profile(full_name, birthdate)
-
-                    # theme_guess is usually (num, title, meaning)
-                    theme_num = None
-                    theme_title = None
-                    theme_meaning = None
-                    if isinstance(theme_guess, tuple) and len(theme_guess) >= 2:
-                        theme_num = theme_guess[0]
-                        theme_title = theme_guess[1]
-                        if len(theme_guess) >= 3:
-                            theme_meaning = theme_guess[2]
-
-                    # Fallback if something is missing
-                    if not theme_title:
-                        theme_title = "your God-given theme"
-
-                    # Try to use your existing helper first
-                    out = None
-                    try:
-                        out = build_pastoral_counsel("calling", theme_guess)
-                    except Exception as e:
-                        logger.warning(
-                            "build_pastoral_counsel('calling', theme_guess) failed: %s", e
-                        )
-                        out = None
-
-                    # If helper failed or just to be safe, create a simple theme-based counsel
-                    if not out:
-                        # Very lightweight generic counsel that always gives:
-                        # 1) one Scripture
-                        # 2) one practical step
-                        scripture = (
-                            "Scripture (Matthew 5:14–16): "
-                            "“You are the light of the world… let your light shine before others…”"
-                        )
-                        step = (
-                            "One practical step: write down one place this week where you sense God is "
-                            "asking you to “turn on the light” — a conversation, a phone call, an act of "
-                            "encouragement — and do it prayerfully, as worship."
-                        )
-
-                        intro = (
-                            f"My name is Pastor Debra Jordan. Because your Christ-centered destiny "
-                            f"theme is **{theme_title}**, I want to speak to you as someone who carries "
-                            f"that grace. This theme points to how God wired you to reflect Christ.\n\n"
-                        )
-
-                        if theme_meaning:
-                            intro += (
-                                f"**What this theme whispers:** {theme_meaning.capitalize()}.\n\n"
-                            )
-
-                        out = intro + scripture + "\n\n" + step
-
-                    out = expand_scriptures_in_text(out)
-
-                    # Optional cites (not critical for this path)
-                    try:
-                        hits_all = blended_search(user_text)
-                        hits_ctx = filter_hits_for_context(hits_all, "advice")
-                        cites = format_cites(hits_ctx)
-                    except Exception:
-                        cites = []
-
-                    return jsonify({
-                        "messages": [{
-                            "role": "assistant",
-                            "model": "advice",
-                            "text": out,
-                            "cites": cites,
-                        }]
-                    }), 200
-
-                # SECOND: normal advice classifier path for other advice queries
                 category = None
-                try:
-                    category = _advice_category(user_text)  # "anxiety","marriage","calling","week", etc.
-                except Exception as e:
-                    logger.warning("_advice_category failed: %s", e)
-                    category = None
 
-                logger.debug("advice_category=%s", category)
-
-                if category:
-                    full_name = (data.get("name") or data.get("full_name") or "").strip()
-                    birthdate = (data.get("birthdate") or data.get("dob") or "").strip()
-                    theme_guess = _maybe_theme_from_profile(full_name, birthdate)
-
-                    out = build_pastoral_counsel(category, theme_guess)
-                    out = expand_scriptures_in_text(out)
-
-                    try:
-                        hits_all = blended_search(user_text)
-                        hits_ctx = filter_hits_for_context(hits_all, "advice")
-                        cites = format_cites(hits_ctx)
-                    except Exception:
-                        cites = []
-
-                    return jsonify({
-                        "messages": [{
-                            "role": "assistant",
-                            "model": "advice",
-                            "text": out,
-                            "cites": cites,
-                        }]
-                    }), 200
-
-            except Exception as e:
-                logger.exception("Advice fast-path failed: %s", e)
-                # fall through to normal routing if something breaks
-
-
-        # --- Faces-of-Eve / Books fast-path (JSON-backed) --------------------
-        try:
-            maybe_faces = answer_faces_of_eve_or_books(user_text)
-            if maybe_faces:
-                try:
-                    hits_all = blended_search(user_text)
-                    hits_ctx = filter_hits_for_context(hits_all, "teachings")
-                    cites = format_cites(hits_ctx)
-                except Exception:
-                    cites = []
-                return jsonify({
-                    "messages": [{
-                        "role": "assistant",
-                        "model": "faq",
-                        "text": maybe_faces,
-                        "cites": cites
-                    }]
-                }), 200
-        except Exception as e:
-            logger.warning("Faces-of-Eve fast-path error: %s", e)
-
-        # ── Destiny claim (“my destiny theme is N”) ──────────────────────────
-        try:
-            claim = _destiny_claim_counsel(user_text)
-            if claim:
-                claim = expand_scriptures_in_text(claim)
-                return jsonify({
-                    "messages": [{
-                        "role": "assistant",
-                        "model": "faq",
-                        "text": claim,
-                        "cites": []
-                    }]
-                }), 200
-        except Exception as e:
-            logger.warning("Destiny-claim handler error: %s", e)
-
-        # ── FAQ / Bio quick answers (includes identity/palm/etc.) ────────────
-        try:
-            faq_reply = answer_pastor_debra_faq(user_text)
-            if faq_reply:
-                faq_reply = expand_scriptures_in_text(faq_reply)
-                return jsonify({
-                    "messages": [{
-                        "role": "assistant",
-                        "model": "faq",
-                        "text": faq_reply,
-                        "cites": []
-                    }]
-                }), 200
-        except Exception as e:
-            logger.warning("FAQ handler error: %s", e)
-
-                # ── HARD FAST-PATH: right-panel "Ask Pastor Debra" destiny-theme button ──
-        try:
-            try:
-                t_norm = _normalize_simple(user_text or "")
-            except Exception:
-                t_norm = (user_text or "").lower()
-
-            # The button text always mentions "Christ-centered destiny theme"
-            if "christ centered destiny theme" in t_norm or \
-               "christ-centered destiny theme" in t_norm:
-                full_name = (data.get("name") or data.get("full_name") or "").strip()
-                birthdate = (data.get("birthdate") or data.get("dob") or "").strip()
-
+            if category:
                 theme_guess = _maybe_theme_from_profile(full_name, birthdate)
-                # theme_guess is usually (num, title, meaning)
-                theme_num = None
-                theme_title = None
-                theme_meaning = None
-                if isinstance(theme_guess, tuple) and len(theme_guess) >= 2:
-                    theme_num = theme_guess[0]
-                    theme_title = theme_guess[1]
-                    if len(theme_guess) >= 3:
-                        theme_meaning = theme_guess[2]
-
-                if not theme_title:
-                    theme_title = "your God-given theme"
-
-                # Use your existing counsel generator for "calling" + theme
-                out = None
-                try:
-                    out = build_pastoral_counsel("calling", theme_guess)
-                except Exception as e:
-                    logger.warning("build_pastoral_counsel('calling', theme_guess) failed: %s", e)
-                    out = None
-
-                # Guaranteed fallback text if that ever fails
-                if not out:
-                    scripture = (
-                        "Scripture (Matthew 5:14–16): "
-                        "“You are the light of the world… let your light shine before others…”"
-                    )
-                    step = (
-                        "One practical step: write down one place this week where you sense God is "
-                        "asking you to “turn on the light” — a conversation, a phone call, an act "
-                        "of encouragement — and do it prayerfully, as worship."
-                    )
-
-                    intro = (
-                        f"My name is Pastor Debra Jordan. Because your Christ-centered destiny "
-                        f"theme is **{theme_title}**, I want to speak to you as someone who carries "
-                        f"that grace. This theme points to how God wired you to reflect Christ.\n\n"
-                    )
-                    if theme_meaning:
-                        intro += f"**What this theme whispers:** {theme_meaning.capitalize()}.\n\n"
-
-                    out = intro + scripture + "\n\n" + step
-
-                    out = expand_scriptures_in_text(out)
-
-                # Optional cites for UI
+                out = build_pastoral_counsel(category, theme_guess)
+                out = expand_scriptures_in_text(out)
                 try:
                     hits_all = blended_search(user_text)
-                    hits_ctx = filter_hits_for_context(hits_all, "advice")
-                    cites = format_cites(hits_ctx)
+                    cites = format_cites(filter_hits_for_context(hits_all, "advice"))
                 except Exception:
                     cites = []
-
                 return jsonify({
                     "messages": [{
                         "role": "assistant",
@@ -8605,134 +8328,157 @@ def chat():
                     }]
                 }), 200
 
-        except Exception as e:
-            logger.exception("Ask-Pastor-Debra hard fast-path failed: %s", e)
-            # if anything breaks here, just fall through to normal routing
+        # ─────────────────────────────────────────────────────────────────────
+        # 8) PROPHETIC FAST-PATH
+        # ─────────────────────────────────────────────────────────────────────
+        if intent_now == "prophetic" and not PROPHECY_KEYWORDS.search(user_text or ""):
+            theme_guess = _maybe_theme_from_profile(full_name, birthdate)
+            out = build_prophetic_word(full_name, birthdate, theme_guess)
+            out = expand_scriptures_in_text(out)
+            try:
+                hits_all = blended_search(user_text)
+                cites = format_cites(filter_hits_for_context(hits_all, "prophetic"))
+            except Exception:
+                cites = []
+            return jsonify({
+                "messages": [{
+                    "role": "assistant",
+                    "model": "prophetic",
+                    "text": out,
+                    "cites": cites,
+                }]
+            }), 200
 
+        # ─────────────────────────────────────────────────────────────────────
+        # 9) FACES-OF-EVE / BOOKS
+        # ─────────────────────────────────────────────────────────────────────
+        try:
+            maybe_faces = answer_faces_of_eve_or_books(user_text)
+            if maybe_faces:
+                try:
+                    hits_all = blended_search(user_text)
+                    cites = format_cites(filter_hits_for_context(hits_all, "teachings"))
+                except Exception:
+                    cites = []
+                return jsonify({
+                    "messages": [{
+                        "role": "assistant",
+                        "model": "faq",
+                        "text": maybe_faces,
+                        "cites": cites,
+                    }]
+                }), 200
+        except Exception:
+            pass
 
-        # ── Retrieval + routing ──────────────────────────────────────────────
+        # ─────────────────────────────────────────────────────────────────────
+        # 10) GENERAL FAQ
+        # ─────────────────────────────────────────────────────────────────────
+        try:
+            faq_reply = answer_pastor_debra_faq(user_text)
+            if faq_reply:
+                return jsonify({
+                    "messages": [{
+                        "role": "assistant",
+                        "model": "faq",
+                        "text": expand_scriptures_in_text(faq_reply),
+                        "cites": []
+                    }]
+                }), 200
+        except Exception:
+            pass
+
+        # ─────────────────────────────────────────────────────────────────────
+        # 11) RETRIEVAL + GPT/T5 GENERATION
+        # ─────────────────────────────────────────────────────────────────────
         try:
             hits_all = blended_search(user_text)
-        except Exception as e:
-            logger.exception("blended_search failed: %s", e)
-            hits_all = []
-
-        try:
-            intent = intent_now or "general"
-            hits_ctx = filter_hits_for_context(hits_all, intent)
+            hits_ctx = filter_hits_for_context(hits_all, intent_now)
             cites = format_cites(hits_ctx)
-        except Exception as e:
-            logger.exception("Context/cites failed: %s", e)
-            hits_ctx, cites = [], []
+        except Exception:
+            hits_all = []
+            cites = []
 
-        # ── NEW: Comfort / scripture-topic detection + short rolling history ─
+        # comfort detection
         comfort_mode = is_in_distress(user_text)
 
+        # Scripture hint logic
         topic = None
-        if SHAME_RX.search(user_text) or GUILT_RX.search(user_text):
-            topic = "shame_guilt"
-        elif FEAR_RX.search(user_text):
-            topic = "fear_anxiety"
-        elif OVERWHELM_RX.search(user_text) or HOPELESS_RX.search(user_text):
-            topic = "overwhelm_burden"
+        if SHAME_RX.search(user_text): topic = "shame_guilt"
+        elif FEAR_RX.search(user_text): topic = "fear_anxiety"
+        elif OVERWHELM_RX.search(user_text): topic = "overwhelm_burden"
 
         scripture_hint = None
         if topic:
-            try:
-                last_ref = session.get("last_scripture_ref")
-            except Exception:
-                last_ref = None
-            chosen = pick_scripture(topic, last_ref=last_ref)
+            chosen = pick_scripture(topic, session.get("last_scripture_ref"))
             if chosen:
                 scripture_hint = chosen
-                try:
-                    session["last_scripture_ref"] = chosen["ref"]
-                except Exception:
-                    pass
+                session["last_scripture_ref"] = chosen["ref"]
 
-        # Build short conversation history (last few turns) from msgs
+        # Build recent history
         recent_history = []
         try:
             for m in msgs[-6:]:
-                role = m.get("role") or "user"
-                text = (m.get("text") or "").strip()
-                if text:
-                    if role not in ("user", "assistant", "system"):
-                        role = "user"
-                    recent_history.append({"role": role, "content": text})
-        except Exception as e:
-            logger.warning("Failed to build recent_history: %s", e)
-            recent_history = []
+                txt = (m.get("text") or "").strip()
+                if txt:
+                    recent_history.append({
+                        "role": m.get("role", "user"),
+                        "content": txt
+                    })
+        except Exception:
+            pass
 
-        # ── Model selection (T5 logic + GPT safety) ──────────────────────────
+        # Model selection
         try:
             if not OPENAI_API_KEY and not getattr(t5_onnx, "ok", False):
-                # no GPT and no ONNX – fallback only
                 model_choice = "fallback"
             else:
-                # explicit prophetic *text* → force GPT engine
                 if intent_now == "prophetic" and PROPHECY_KEYWORDS.search(user_text or ""):
                     model_choice = "gpt"
                 elif active_model in ("t5", "gpt"):
                     model_choice = active_model
                 else:
                     model_choice = choose_model(user_text, hits_all, getattr(t5_onnx, "ok", False))
-        except Exception as e:
-            logger.exception("choose_model failed: %s", e)
+        except Exception:
             model_choice = "fallback"
 
-        # ── Generate (T5-style logic, GPT-backed when ONNX off) ──────────────
+        # GENERATION
         try:
             if model_choice == "t5":
-                # Build the same prompt you’d send to T5
                 prompt = build_t5_prompt(user_text, hits_all)
-
                 out = ""
                 if getattr(t5_onnx, "ok", False):
-                    # Real ONNX path (e.g., local dev or future beefier server)
                     try:
-                        out = t5_onnx.generate(prompt, max_new_tokens=160) or ""
-                    except Exception as e:
-                        logger.exception("t5_onnx.generate failed, falling back to GPT: %s", e)
-
+                        out = t5_onnx.generate(prompt, max_new_tokens=160)
+                    except Exception:
+                        out = ""
                 if not out and OPENAI_API_KEY:
-                    # Prelaunch path: ONNX disabled → run the T5 prompt through GPT
-                    logger.warning("ONNX unavailable — routing T5-style prompt to GPT.")
                     out = gpt_answer(
-                        prompt,           # use composed T5-style prompt
-                        hits_all,
+                        prompt, hits_all,
                         no_cache=no_cache,
                         comfort_mode=comfort_mode,
                         scripture_hint=scripture_hint,
                         history=recent_history,
                     )
-
-                if not out:
-                    # Last safety net if everything above fails
+                if not out and OPENAI_API_KEY:
                     out = gpt_answer(
-                        user_text,
-                        hits_all,
+                        user_text, hits_all,
                         no_cache=no_cache,
                         comfort_mode=comfort_mode,
                         scripture_hint=scripture_hint,
                         history=recent_history,
-                    ) if OPENAI_API_KEY else ""
-
+                    )
                 if not out:
-                    safe = (
+                    out = (
                         "Let’s invite the Lord into this moment. Scripture: Matthew 11:28\n"
-                        "Prayer: Jesus, steady our hearts and show one faithful next step. Amen.\n"
-                        "What’s one small action you can take today?"
+                        "Prayer: Jesus, steady our hearts. Amen."
                     )
-                    out = safe
-
                 out = expand_scriptures_in_text(out)
                 resp = {"role": "assistant", "model": "t5", "text": out, "cites": cites}
 
             elif model_choice == "gpt" and OPENAI_API_KEY:
                 out = gpt_answer(
-                    user_text,
-                    hits_all,
+                    user_text, hits_all,
                     no_cache=no_cache,
                     comfort_mode=comfort_mode,
                     scripture_hint=scripture_hint,
@@ -8744,8 +8490,7 @@ def chat():
             else:
                 safe = (
                     "Let’s invite the Lord into this moment. Scripture: Matthew 11:28\n"
-                    "Prayer: Jesus, steady our hearts and show one faithful next step. Amen.\n"
-                    "What’s one small action you can take today?"
+                    "Prayer: Jesus, steady our hearts. Amen."
                 )
                 resp = {
                     "role": "assistant",
@@ -8756,12 +8501,10 @@ def chat():
 
             return jsonify({"messages": [resp]}), 200
 
-        except Exception as e:
-            logger.exception("Generation block failed: %s", e)
+        except Exception:
             safe = (
                 "Let’s invite the Lord into this moment. Scripture: Matthew 11:28\n"
-                "Prayer: Jesus, steady our hearts and show one faithful next step. Amen.\n"
-                "What’s one small action you can take today?"
+                "Prayer: Jesus, steady our hearts. Amen."
             )
             return jsonify({
                 "messages": [{
@@ -8771,8 +8514,7 @@ def chat():
                 }]
             }), 200
 
-    except Exception as e:
-        logger.exception("Unhandled error in /chat: %s", e)
+    except Exception:
         return jsonify({
             "messages": [{
                 "role": "assistant",
@@ -8780,6 +8522,7 @@ def chat():
                 "text": "Something went wrong. Let’s try again."
             }]
         }), 200
+
 
 
 
