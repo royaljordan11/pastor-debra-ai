@@ -247,51 +247,60 @@
 <script>
 const API_BASE = (location.protocol.startsWith('http') ? '' : 'http://localhost:8000');
 
-/* ---------- INTRO: reveal on ANY interaction or when video ends ---------- */
+/* ---------- INTRO: reveal on ANY interaction ---------- */
 const introEl    = document.getElementById('intro');
 const mainGrid   = document.getElementById('mainGrid');
-const introVideo = document.getElementById('introVideo');
 const skipIntro  = document.getElementById('skipIntro');
 const introCatch = document.getElementById('introCatch');
+const introIframe = document.getElementById('introIframe');  // YouTube iframe
 
 function revealApp(){
   if (!introEl || introEl.classList.contains('intro-hidden')) return;
-  try { introVideo.pause(); } catch(e){}
+
+  // No more introVideo.pause() — YouTube iframe cannot be paused this way
+  try { 
+    introIframe.src = "";  // stop YouTube playback safely
+  } catch(e){}
+
   introEl.classList.add('intro-hidden');
   mainGrid.style.opacity = 1;
   unlockOff();
-  setTimeout(()=>{ try{ introEl.remove(); }catch(e){} }, 320);
+
+  setTimeout(()=>{ 
+    try{ introEl.remove(); } catch(e){} 
+  }, 320);
 }
 
 function unlockOn(){
   const opts = {capture:true, passive:true};
-  window.addEventListener('click',      revealApp, opts);
-  window.addEventListener('pointerdown',revealApp, opts);
-  window.addEventListener('touchstart', revealApp, opts);
-  window.addEventListener('keydown',    revealApp, opts);
-  window.addEventListener('wheel',      revealApp, opts);
+
+  window.addEventListener('click',       revealApp, opts);
+  window.addEventListener('pointerdown', revealApp, opts);
+  window.addEventListener('touchstart',  revealApp, opts);
+  window.addEventListener('keydown',     revealApp, opts);
+  window.addEventListener('wheel',       revealApp, opts);
+
   introCatch.addEventListener('click', revealApp);
-  introVideo.addEventListener('pointerdown', revealApp);
   introEl.addEventListener('click', revealApp);
-}
-function unlockOff(){
-  const opts = {capture:true};
-  window.removeEventListener('click',      revealApp, opts);
-  window.removeEventListener('pointerdown',revealApp, opts);
-  window.removeEventListener('touchstart', revealApp, opts);
-  window.removeEventListener('keydown',    revealApp, opts);
-  window.removeEventListener('wheel',      revealApp, opts);
+
+  // ❌ Removed: introVideo.addEventListener(...)
 }
 
-const introIframe = document.getElementById("introIframe");
+function unlockOff(){
+  const opts = {capture:true};
+  window.removeEventListener('click',       revealApp, opts);
+  window.removeEventListener('pointerdown', revealApp, opts);
+  window.removeEventListener('touchstart',  revealApp, opts);
+  window.removeEventListener('keydown',     revealApp, opts);
+  window.removeEventListener('wheel',       revealApp, opts);
+}
 
 document.getElementById("skipIntro").addEventListener("click", revealApp);
 document.getElementById("introCatch").addEventListener("click", revealApp);
 
-// YouTube cannot fire "ended", so we remove that listener completely.
+// No "ended" listener — YouTube does not support it
 
-unlockOn();   // KEEP THIS LINE EXACTLY WHERE IT WAS
-
+unlockOn(); // KEEP THIS EXACTLY HERE
 
 /* ---------- Utils ---------- */
 const qs = s=>document.querySelector(s);
