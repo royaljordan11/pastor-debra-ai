@@ -3190,6 +3190,82 @@ RELATION_WORDS = {
 MASC_REL = {"father", "dad", "brother", "son", "nephew", "husband"}
 FEM_REL  = {"mother", "mom", "sister", "daughter", "niece", "wife"}
 
+def build_theme_counsel(theme_num: int, theme_title: str, theme_meaning: str):
+    """
+    Produces unique, theme-specific prophetic counsel for each destiny theme.
+    Warm, pastoral, prophetic tone in Pastor Debra's voice.
+    """
+
+    SCRIPTURES = {
+        1: "Isaiah 43:19 — “Behold, I will do a new thing; now it shall spring forth.”",
+        2: "Matthew 5:9 — “Blessed are the peacemakers, for they shall be called children of God.”",
+        3: "Psalm 96:1 — “Sing unto the Lord a new song.”",
+        4: "Proverbs 24:3 — “Through wisdom a house is built.”",
+        5: "2 Corinthians 3:17 — “Where the Spirit of the Lord is, there is freedom.”",
+        6: "Malachi 4:6 — “He will turn the hearts of the fathers to the children.”",
+        7: "Proverbs 25:2 — “It is the glory of God to conceal a matter; the honor of kings to search it out.”",
+        8: "Luke 12:48 — “To whom much is given, much will be required.”",
+        9: "Galatians 6:9 — “Do not grow weary in doing good, for in due season you shall reap.”",
+        11: "Matthew 5:14 — “You are the light of the world.”",
+        22: "Isaiah 58:12 — “You shall be called the repairer of the breach.”",
+        33: "Philippians 2:4 — “Look not only to your own interests, but to the interests of others.”",
+    }
+
+    PROPHETIC = {
+        1:  "Because you carry **Pioneer Grace**, there's a mantle on your life to start what others are afraid to begin. Heaven trusts you with new assignments and unexplored paths.",
+        2:  "Because you carry the **Peacemaker** mantle, God uses you to settle storms, reconcile hearts, and create safe relational environments.",
+        3:  "Because you walk in the **Psalmist** grace, your creativity carries healing, atmosphere-shifting, and emotional deliverance.",
+        4:  "Because you carry the **Builder** mantle, God trusts you with systems, structure, and long-term foundations.",
+        5:  "Because you walk in **Holy Freedom**, your life breaks cycles, lifts burdens, and introduces breakthrough movement.",
+        6:  "Because you carry the **Keeper of Covenant** grace, you guard relationships, protect legacy, and carry generational assignments.",
+        7:  "Because you walk as a **Mystic Scholar**, revelation comes to you in layers — dreams, study, meditation, and divine patterns.",
+        8:  "Because you carry the **Steward of Influence** mantle, your decisions impact doors, opportunities, resources, and the lives of many.",
+        9:  "Because you walk as a **Compassionate Finisher**, you complete what others leave unfinished and bring assignments into harvest.",
+        11: "Because you carry the **Prophetic Beacon** grace, you illuminate paths, expose hidden traps, and signal divine timing to others.",
+        22: "Because you are a **Master Repairer**, heaven anoints you to rebuild families, systems, communities, and broken places.",
+        33: "Because you walk as a **Servant-Teacher**, your humility carries healing, and your teaching unlocks identity in others.",
+    }
+
+    PRACTICAL = {
+        1:  "Take one small step toward a new assignment this week — write the blueprint, make the call, or register the idea.",
+        2:  "Reach out to one person with whom peace needs to be created or restored.",
+        3:  "Spend 15 minutes releasing creativity unto the Lord — sing, write, or worship freely.",
+        4:  "Organize one area of your life — your schedule, finances, or workspace — as worship unto God.",
+        5:  "Identify one area where God is calling you to step out of old patterns and into freedom.",
+        6:  "Pray for someone in your family by name — stand in the gap as a covenant-keeper.",
+        7:  "Set aside 10 minutes for meditation or Scripture study to honor your wisdom mantle.",
+        8:  "Write down the top three responsibilities God is calling you to steward with excellence.",
+        9:  "Finish one unfinished task — spiritually, emotionally, or practically — as an act of obedience.",
+        11: "Share one encouraging insight or warning with someone who needs clarity right now.",
+        22: "Choose one area of your life needing rebuilding — outline Phase 1 and give it to God.",
+        33: "Serve or encourage one person today with no expectation of return.",
+    }
+
+    scripture = SCRIPTURES.get(theme_num, "")
+    prophetic_word = PROPHETIC.get(theme_num, "")
+    step = PRACTICAL.get(theme_num, "")
+
+    return expand_scriptures_in_text(f"""
+My name is **Pastor Debra Jordan**.
+
+Because your Christ-centered destiny theme is **{theme_title}**, I want to speak directly into the grace that God has placed on your life.
+
+**Prophetic Insight:**  
+{prophetic_word}
+
+**Spiritual Meaning:**  
+This theme expresses *{theme_meaning}* — a holy pattern in how God wired you to reflect Christ uniquely.
+
+**Scripture:**  
+{scripture}
+
+**One Practical Step:**  
+{step}
+
+If you'd like, I can help you discern how this theme shows up in your relationships, assignments, and the season you're stepping into right now.
+""")
+
+
 def _guess_pronouns(rel: str | None):
     """
     Returns (possessive, subject) pronouns based on relationship.
@@ -8135,96 +8211,41 @@ def chat():
 
         # ─────────────────────────────────────────────────────────────────────
         # 2) UNIFIED DESTINY THEME FAST-PATH  (OPTION A)
-        # ALWAYS FIRST PRIORITY.
-        # Triggers:
-        #   • Message contains “Christ-centered destiny theme”
-        #   • Message contains “would you give me personal counsel”
-        #   • User says “my theme is…”
-        #   • User gives a theme title or number
-        #   • DEF menu triggered with def_chat flag
-        #   • “Use my name & DOB” requests
+        # ─────────────────────────────────────────────────────────────────────
+        # DESTINY THEME FAST-PATH (FINAL VERSION)
+        # Highest priority. Always returns theme-specific counsel.
         # ─────────────────────────────────────────────────────────────────────
 
-        THEME_TITLES = {
-            "pioneer grace": 1,
-            "peacemaker": 2,
-            "psalmist": 3,
-            "builder": 4,
-            "holy freedom": 5,
-            "keeper of covenant": 6,
-            "mystic scholar": 7,
-            "steward of influence": 8,
-            "compassionate finisher": 9,
-            "prophetic beacon": 11,
-            "master repairer": 22,
-            "servant-teacher": 33,
-        }
+        # 1. Detect theme in user text
+        match = match_theme_from_text(user_text)
 
-        THEME_PHRASES = [
-            "christ centered destiny theme",
-            "christ-centered destiny theme",
-            "would you give me personal counsel",
-            "my theme is",
-            "i am a",
-            "i'm a",
-            "theme number",
-            "my number is",
-            "my destiny theme",
-            "explain my theme",
-            "use my name",
-        ]
+        # 2. Calculate theme from name (fallback)
+        name_theme = None
+        if full_name:
+            name_theme = destiny_theme_for_name(full_name)
 
-        def match_theme_from_text(text: str):
-            t = (text or "").lower()
-            # match by title
-            for title, num in THEME_TITLES.items():
-                if title in t:
-                    return num, DESTINY_THEME_NAMES.get(num)
-            # match by number
-            nums = re.findall(r"\b(1|2|3|4|5|6|7|8|9|11|22|33)\b", t)
-            if nums:
-                n = int(nums[0])
-                if n in DESTINY_THEME_NAMES:
-                    return n, DESTINY_THEME_NAMES[n]
-            return None
+        # Decide final theme
+        if match:
+            theme_num, theme_title = match
+            theme_meaning = DESTINY_THEME_MEANINGS.get(theme_num)
+            final_theme = (theme_num, theme_title, theme_meaning)
+        elif name_theme and name_theme[0]:
+            final_theme = name_theme
+        else:
+            final_theme = None
 
+        # Trigger phrases
         theme_triggered = (
             any(p in t_norm for p in THEME_PHRASES) or
-            bool(data.get("def_chat"))
+            bool(data.get("def_chat")) or
+            (match is not None)
         )
 
-        if theme_triggered:
-            # Determine theme
-            match = match_theme_from_text(user_text)
-            if match:
-                theme_num, theme_title = match
-                theme_guess = (theme_num, theme_title, None)
-            else:
-                theme_guess = _maybe_theme_from_profile(full_name, birthdate)
-                if not theme_guess:
-                    theme_guess = (None, "your God-given theme", None)
+        if theme_triggered and final_theme:
+            theme_num, theme_title, theme_meaning = final_theme
 
-            # Build counsel using your helper
-            try:
-                out = build_pastoral_counsel("calling", theme_guess)
-            except Exception:
-                out = None
+            out = build_theme_counsel(theme_num, theme_title, theme_meaning)
 
-            # guaranteed fallback counsel
-            if not out:
-                theme_title = theme_guess[1] if len(theme_guess) >= 2 else "your God-given theme"
-                out = (
-                    f"My name is Pastor Debra Jordan. Because your Christ-centered destiny theme "
-                    f"is **{theme_title}**, I want to speak to you as someone who carries that grace.\n\n"
-                    "Scripture (Matthew 5:14–16): “You are the light of the world… let your light shine before others…”\n\n"
-                    "One practical step this week:\n"
-                    "Choose one place—a call, a conversation, or an act of encouragement—"
-                    "where you intentionally allow this theme to shine as worship."
-                )
-
-            out = expand_scriptures_in_text(out)
-
-            # Optional citations
             try:
                 hits_all = blended_search(user_text)
                 cites = format_cites(filter_hits_for_context(hits_all, "advice"))
@@ -8239,6 +8260,7 @@ def chat():
                     "cites": cites,
                 }]
             }), 200
+
 
         # ─────────────────────────────────────────────────────────────────────
         # 3) P.O.M.E FAST-PATH
