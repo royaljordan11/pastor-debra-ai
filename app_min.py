@@ -101,17 +101,37 @@ def _clean_env_url(env_key: str) -> str:
     Read a URL from an env var and clean common mistakes:
     - Strip whitespace
     - Strip leading '=' or spaces (e.g. '=https://...' -> 'https://...')
+    - If it's a Google Drive /file/d/<ID>/view?share_link, convert to a direct
+      uc?export=download&id=<ID> URL so we get the raw file bytes instead of HTML.
     """
     raw = os.getenv(env_key, "") or ""
     cleaned = raw.strip().lstrip("= ")
+
+    # Auto-fix common Google Drive "view" URLs
+    if "drive.google.com/file/d/" in cleaned and "uc?export=download" not in cleaned:
+        m = re.search(r"/file/d/([^/]+)", cleaned)
+        if m:
+            file_id = m.group(1)
+            fixed = f"https://drive.google.com/uc?export=download&id={file_id}"
+            logger.warning(
+                "%s looked like a Google Drive view link; "
+                "rewriting to direct download URL: %r -> %r",
+                env_key,
+                cleaned,
+                fixed,
+            )
+            cleaned = fixed
+
     if raw and cleaned != raw:
         logger.warning(
-            "%s had leading junk (%r) -> cleaned to %r",
+            "%s had leading or formatting junk (%r) -> cleaned to %r",
             env_key,
             raw,
             cleaned,
         )
+
     return cleaned
+
 
 
 # OpenAI/GPT
@@ -352,16 +372,33 @@ def ensure_onnx_from_zip() -> None:
 
 def ensure_tokenizer_from_zip() -> None:
     """
-    Compatibility shim.
+    Ensure tokenizer files exist by downloading and extracting TOKENIZER_ZIP_URL
+    (if provided).
 
-    Right now we assume the T5 tokenizer files are already available
-    in the Docker image (or on the filesystem), so this is a no-op.
-
-    If in the future you want to host a tokenizer.zip somewhere and
-    download/extract it at startup (similar to the ONNX model),
-    you can extend this function to mirror ensure_onnx_from_zip().
+    If TOKENIZER_ZIP_URL is not set, we assume the tokenizer folder is already
+    baked into the image (e.g., committed in the repo or built into the Docker image).
     """
-    return
+    url = _clean_env_url("TOKENIZER_ZIP_URL")
+    if not url:
+        # No remote tokenizer configured; assume it's bundled.
+        logger.info("TOKENIZER_ZIP_URL not set; assuming tokenizer is bundled in image.")
+        return
+
+    # If we already have a tokenizer_config.json, don't redownload every boot.
+    token_cfg = TOKENIZER_DIR / "tokenizer_config.json"
+    if token_cfg.exists():
+        logger.info("Tokenizer config already present at %s; skipping download.", token_cfg)
+        return
+
+    TOKENIZER_DIR.mkdir(parents=True, exist_ok=True)
+    _download_zip_to_dir(url, TOKENIZER_DIR, "TOKENIZER")
+
+    if not token_cfg.exists():
+        logger.warning(
+            "TOKENIZER_ZIP_URL download finished but tokenizer_config.json "
+            "not found in %s. Check the zip contents.",
+            TOKENIZER_DIR,
+        )
 
 
 # ────────── ONNX + Tokenizer Init ──────────
@@ -411,7 +448,7 @@ def _maybe_init_tokenizer() -> None:
         TOKENIZER = AutoTokenizer.from_pretrained(
             str(TOKENIZER_DIR),
             local_files_only=True,
-            use_fast=False,  # use the slow GPT-2 tokenizer
+            use_fast=False,  # fall back to slow tokenizer if needed
         )
         logger.info(
             "Tokenizer initialized from %s (vocab size=%s)",
@@ -420,6 +457,7 @@ def _maybe_init_tokenizer() -> None:
         )
     except Exception as e:
         logger.warning("Tokenizer still unavailable after download: %s", e)
+
 
 
 # Initialize tokenizer (local: already present; Railway: triggers download)
