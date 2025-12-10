@@ -6870,6 +6870,40 @@ def answer_faces_of_eve_or_books(user_text: str) -> Optional[str]:
 
     return None  # not a Faces/Books question
 
+# Trigger phrases for Destiny Theme counsel
+THEME_PHRASES = [
+    # core phrase in ANY form
+    "christ-centered destiny theme",
+    "christ centered destiny theme",
+    "christ–centered destiny theme",   # en dash
+    "christ—centered destiny theme",   # em dash
+
+    # lower / upper / mixed
+    "christ-centered destiny theme".lower(),
+    "christ-centered destiny theme".upper(),
+    "christ-centered destiny theme".capitalize(),
+
+    # user request patterns
+    "would you give me personal counsel",
+    "my theme is",
+    "i am a",
+    "i’m a",
+    "i'm a",
+    "theme number",
+    "my number is",
+    "my destiny theme",
+    "explain my theme",
+    "use my name",
+    "ask pastor debra",
+    "personal counsel",
+
+    # ensure theme titles trigger automatically
+    "master repairer",
+    "prophetic beacon",
+    "mystic scholar",
+]
+
+
 
 # ────────── GPT helpers (cheap-first + cache) ──────────
 
@@ -6927,6 +6961,8 @@ base_system_prompt = (
     "OVERALL GOAL: Make the user feel seen, safe, understood, and held in God's love. "
     "Your responses should feel like a real conversation with a spiritual mother — warm, grounded, emotionally present, and deeply compassionate."
 )
+
+
 
 
 def build_system_prompt(user_text: str) -> str:
