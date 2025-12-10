@@ -1,198 +1,3 @@
-"""
-Pastor Debra Chatbot Backend (Flask) — Hybrid (T5/ONNX + GPT)
-Hardened: .env loading, videos.json auto-stub, T5 tokenizer sanity checks + fast→slow fallback.
-
-Endpoints
-- GET  /              -> serves Pastor.html
-- GET  /mom.mp4       -> serves intro video (mp4 preferred)
-- GET  /mom.mov       -> serves intro video (mov fallback)
-- GET  /videos        -> videos list (mom.mp4/mom.mov injected first if present)
-- GET  /health        -> model/docs status (incl. GPT availability, budgets, ONNX providers)
-- POST /reload        -> hot reload corpora
-- GET  /search?q=...  -> debug blended retrieval
-- GET|POST /destiny_theme[?dob|?name]
-- POST /chat          -> main chat (router: T5 or GPT or forced)
-"""
-
-import os, re, json, logging, time, hashlib, threading, datetime, random, shutil
-from collections import defaultdict, deque
-from dataclasses import dataclass
-from typing import List, Dict, Any, Tuple, Optional
-from pathlib import Path
-from datetime import datetime, timezone
-
-import numpy as np
-import requests
-import zipfile
-import onnxruntime as ort
-from transformers import AutoTokenizer
-
-from flask import (
-    Flask,
-    request,
-    jsonify,
-    session,
-    Response,
-    send_from_directory,
-)
-from flask_cors import CORS
-
-from rapidfuzz import fuzz
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-
-try:
-    import torch
-except ImportError:
-    torch = None
-
-
-# ────────── Small helpers ──────────
-def _get_bool(env_key: str, default: bool) -> bool:
-    v = os.getenv(env_key)
-    if v is None:
-        return default
-    return str(v).strip().lower() in {"1", "true", "yes", "y", "on"}
-
-
-def _get_int(env_key: str, default: int) -> int:
-    try:
-        return int(os.getenv(env_key, str(default)))
-    except Exception:
-        return default
-
-
-def _get_float(env_key: str, default: float) -> float:
-    try:
-        return float(os.getenv(env_key, str(default)))
-    except Exception:
-        return default
-
-
-# ────────── Env & Config ──────────
-try:
-    from dotenv import load_dotenv
-    # IMPORTANT: don't let .env override Railway/project env
-    load_dotenv(override=False)
-except Exception:
-    pass
-
-APP_VERSION = "2.4.0"
-DEFAULT_PORT = _get_int("PORT", 8000)
-DEBUG_MODE = _get_bool("DEBUG", True)
-MAX_INPUT_CHARS = _get_int("MAX_INPUT_CHARS", 4000)
-
-# CORS
-_allow_raw = os.getenv("CORS_ALLOWLIST", "*")
-_CORS_ALLOWED = [o.strip() for o in _allow_raw.split(",") if o.strip()]
-CORS_CONFIG = {"origins": "*" if _CORS_ALLOWED == ["*"] else _CORS_ALLOWED}
-
-# ────────── Logging ──────────
-logging.basicConfig(
-    level=logging.DEBUG if DEBUG_MODE else logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s :: %(message)s",
-)
-logger = logging.getLogger("pastor-debra-hybrid")
-
-
-def _clean_env_url(env_key: str) -> str:
-    """
-    Read a URL from an env var and clean common mistakes:
-    - Strip whitespace
-    - Strip leading '=' or spaces (e.g. '=https://...' -> 'https://...')
-    """
-    raw = os.getenv(env_key, "") or ""
-    cleaned = raw.strip().lstrip("= ")
-    if raw and cleaned != raw:
-        logger.warning(
-            "%s had leading junk (%r) -> cleaned to %r",
-            env_key,
-            raw,
-            cleaned,
-        )
-    return cleaned
-
-
-# OpenAI/GPT
-OPENAI_API_KEY   = os.getenv("OPENAI_API_KEY", "")
-OPENAI_BASE_URL  = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
-OPENAI_MODEL     = os.getenv("OPENAI_MODEL", "gpt-4o-mini")   # economical default
-OPENAI_MODEL_ALT = os.getenv("OPENAI_MODEL_ALT", "gpt-4o")    # stronger (rare)
-OPENAI_TIMEOUT   = _get_float("OPENAI_TIMEOUT", 30.0)
-OPENAI_TEMP      = _get_float("OPENAI_TEMP", 0.6)
-
-# Optional budget guard (rough estimate)
-GPT_DAILY_BUDGET_CENTS = _get_int("GPT_DAILY_BUDGET_CENTS", 999999)
-GPT_APPROX_CENTS_PER_1K_TOKENS = _get_float("GPT_APPROX_CENTS_PER_1K_TOKENS", 25.0)
-
-# Rate limit (per-IP, sliding window)
-RATE_WINDOW_SEC = _get_int("RATE_WINDOW_SEC", 10)
-RATE_MAX_HITS   = _get_int("RATE_MAX_HITS", 12)
-_RATE = defaultdict(lambda: deque(maxlen=20))
-_rate_lock = threading.Lock()
-
-
-def _throttle(ip: str) -> bool:
-    now = time.time()
-    with _rate_lock:
-        q = _RATE[ip]
-        while q and (now - q[0]) > RATE_WINDOW_SEC:
-            q.popleft()
-        if len(q) >= RATE_MAX_HITS:
-            return True
-        q.append(now)
-        return False
-
-
-if not OPENAI_API_KEY:
-    logger.warning("OPENAI_API_KEY not set — GPT disabled.")
-else:
-    logger.info(
-        "GPT configured | MODEL=%s ALT=%s BASE=%s",
-        OPENAI_MODEL,
-        OPENAI_MODEL_ALT,
-        OPENAI_BASE_URL,
-    )
-
-
-# ────────── Paths (robust) ──────────
-BASE_DIR = Path(os.getenv("PASTOR_DEBRA_BASE_DIR", Path(__file__).resolve().parent)).resolve()
-
-# ONNX model directory; on Railway we mount the volume at /app/onnx
-ONNX_DIR = BASE_DIR / "onnx"
-ONNX_DIR.mkdir(parents=True, exist_ok=True)
-
-# ONNX model stored inside the volume at /app/onnx/model.onnx
-ONNX_MODEL_PATH = ONNX_DIR / "model.onnx"
-
-# Hugging Face tokenizer lives in ./tokenizer
-TOKENIZER_DIR = BASE_DIR / "tokenizer"
-TOKENIZER_DIR.mkdir(parents=True, exist_ok=True)
-MODEL_TOKENIZER_PATH = TOKENIZER_DIR  # keep for compatibility
-
-# Kept for backward compatibility if referenced elsewhere
-MODEL_TOKENIZER_PATH = TOKENIZER_DIR
-
-PASTOR_DEBRA_JSON          = BASE_DIR / "PASTOR_DEBRA.json"
-SESSION_PASTOR_DEBRA_JSON  = BASE_DIR / "SESSION_PASTOR_DEBRA.json"
-FACES_OF_EVE_JSON          = BASE_DIR / "FACES_OF_EVE.json"
-DESTINY_THEMES_JSON        = BASE_DIR / "destiny_themes.json"
-VIDEOS_JSON                = BASE_DIR / "videos.json"
-DESTINY_JSON_PATH          = str(DESTINY_THEMES_JSON)
-
-# Scripture settings
-SCRIPTURE_TRANSLATION = os.getenv("SCRIPTURE_TRANSLATION", "web")  # web, kjv, asv...
-SCRIPTURE_API_BASE    = os.getenv("SCRIPTURE_API_BASE", "https://bible-api.com")
-SCRIPTURE_CACHE_PATH  = BASE_DIR / "scripture_cache.json"
-
-
-
-
-# ────────── Remote zip download helpers (Google Drive) ──────────
-# Expects env vars:
-#   TOKENIZER_ZIP_URL = <any URL or Drive share link>
-#   ONNX_ZIP_URL      = <any URL or Drive share link>
-# Files are downloaded once on first boot and then reused.
 
 """
 Pastor Debra Chatbot Backend (Flask) — Hybrid (T5/ONNX + GPT)
@@ -388,11 +193,7 @@ SCRIPTURE_CACHE_PATH  = BASE_DIR / "scripture_cache.json"
 #   ONNX_ZIP_URL      = https://drive.google.com/uc?export=download&id=...
 # Files are downloaded once on first boot and then reused.
 
-# ────────── Remote zip download helpers (Google Drive) ──────────
-# Expects env vars:
-#   TOKENIZER_ZIP_URL = <any URL or Drive share link>
-#   ONNX_ZIP_URL      = <any URL or Drive share link>
-# Files are downloaded once on first boot and then reused.
+
 
 def _download_zip_to_dir(url: str, dest_dir: Path, label: str) -> None:
     """
@@ -548,6 +349,19 @@ def ensure_onnx_from_zip() -> None:
         )
     else:
         logger.warning("ONNX_MODEL_PATH still missing after ensure_onnx_from_zip().")
+
+def ensure_tokenizer_from_zip() -> None:
+    """
+    Compatibility shim.
+
+    Right now we assume the T5 tokenizer files are already available
+    in the Docker image (or on the filesystem), so this is a no-op.
+
+    If in the future you want to host a tokenizer.zip somewhere and
+    download/extract it at startup (similar to the ONNX model),
+    you can extend this function to mirror ensure_onnx_from_zip().
+    """
+    return
 
 
 # ────────── ONNX + Tokenizer Init ──────────
