@@ -322,23 +322,24 @@ def _download_zip_to_dir(url: str, dest_dir: Path, label: str) -> None:
 
 def ensure_onnx_from_zip() -> None:
     """
-    Ensure ONNX_MODEL_PATH exists.
-    If missing, download ONNX_ZIP_URL and extract into ONNX_DIR.
+    Always ensure ONNX_MODEL_PATH exists by pulling from ONNX_ZIP_URL.
+
+    We *always* re-download on startup (overwrites old/corrupted files).
+    Then we try to locate a .onnx file inside ONNX_DIR and normalize
+    it to ONNX_MODEL_PATH.
     """
-    if ONNX_MODEL_PATH.exists():
-        logger.info("ONNX model already present at %s", ONNX_MODEL_PATH)
-        return
-
-    url = _clean_env_url("ONNX_ZIP_URL")
+    url = os.getenv("ONNX_ZIP_URL", "")
+    url = (url or "").strip()
     if not url:
-        logger.warning("ONNX_ZIP_URL not set or empty; skipping ONNX download.")
+        logger.warning("ONNX_ZIP_URL not set; skipping ONNX init.")
         return
 
-    logger.info("ONNX_ZIP_URL (cleaned) = %r", url)
+    logger.info("ensure_onnx_from_zip: refreshing ONNX from %s", url)
     _download_zip_to_dir(url, ONNX_DIR, "ONNX")
 
+    # If the downloader already wrote to ONNX_MODEL_PATH (raw .onnx case),
+    # we just keep it. Otherwise, look for any *.onnx inside ONNX_DIR.
     if not ONNX_MODEL_PATH.exists():
-        # Try to guess the ONNX file inside the extracted folder
         candidates = list(ONNX_DIR.rglob("*.onnx"))
         if len(candidates) == 1:
             logger.info("Renaming ONNX candidate %s -> %s", candidates[0], ONNX_MODEL_PATH)
@@ -354,6 +355,14 @@ def ensure_onnx_from_zip() -> None:
         else:
             logger.warning("No .onnx files found in %s after download.", ONNX_DIR)
 
+    if ONNX_MODEL_PATH.exists():
+        logger.info(
+            "ONNX_MODEL_PATH now exists at %s (size=%s bytes)",
+            ONNX_MODEL_PATH,
+            ONNX_MODEL_PATH.stat().st_size,
+        )
+    else:
+        logger.warning("ONNX_MODEL_PATH still missing after ensure_onnx_from_zip().")
 
 def ensure_tokenizer_from_zip() -> None:
     """
@@ -441,11 +450,6 @@ app.config.update(JSON_SORT_KEYS=False, JSONIFY_PRETTYPRINT_REGULAR=False)
 CORS(app, resources={r"/*": CORS_CONFIG})
 
 
-# ────────── Flask ──────────
-app = Flask(__name__, static_folder=str(BASE_DIR), static_url_path="")
-# Reduce surprise formatting diffs in JSON responses
-app.config.update(JSON_SORT_KEYS=False, JSONIFY_PRETTYPRINT_REGULAR=False)
-CORS(app, resources={r"/*": CORS_CONFIG})
 
 
 @app.route("/")
