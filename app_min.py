@@ -192,27 +192,87 @@ SCRIPTURE_CACHE_PATH  = BASE_DIR / "scripture_cache.json"
 #   ONNX_ZIP_URL      = https://drive.google.com/uc?export=download&id=...
 # Files are downloaded once on first boot and then reused.
 
+# ────────── Remote zip download helpers (Google Drive) ──────────
+# Expects env vars:
+#   TOKENIZER_ZIP_URL = <any URL or Drive share link>
+#   ONNX_ZIP_URL      = <any URL or Drive share link>
+# Files are downloaded once on first boot and then reused.
+
 def _download_zip_to_dir(url: str, dest_dir: Path, label: str) -> None:
     """
     Download a zip from `url` and extract it into `dest_dir`.
 
-    Assumes `url` is a direct-download ZIP (we already baked in the
-    Google Drive confirm token in ONNX_ZIP_URL).
+    Special handling for Google Drive share links:
+    - If the first response is an HTML page with a "Download anyway" form,
+      we parse the hidden confirm token and then hit the real
+      drive.usercontent.google.com download URL.
     """
     url = (url or "").strip().lstrip("= ")
     if not url:
         logger.warning("%s_ZIP_URL empty after cleaning; skipping download.", label)
         return
 
-    try:
-        dest_dir.mkdir(parents=True, exist_ok=True)
-        tmp_zip = dest_dir.parent / f"{label.lower()}_download.zip"
-        logger.info("%s: downloading from %s ...", label, url)
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    tmp_zip = Path("/app") / f"{label.lower()}_download.zip"
 
-        with requests.get(url, stream=True, timeout=600) as r:
-            r.raise_for_status()
+    # Remove any old temp file
+    try:
+        if tmp_zip.exists():
+            tmp_zip.unlink()
+    except Exception:
+        pass
+
+    try:
+        with requests.Session() as s:
+            # First request (might be an HTML interstitial for Google Drive)
+            logger.info("%s: initial request to %s ...", label, url)
+            r1 = s.get(url, timeout=60)
+            r1.raise_for_status()
+            ctype = (r1.headers.get("Content-Type") or "").lower()
+
+            dl_url = url
+            dl_params = None
+
+            if "text/html" in ctype and "drive.google.com" in url:
+                # Probably the virus-scan / download-warning page.
+                html = r1.text
+                m_id = re.search(r'name="id"\s+value="([^"]+)"', html)
+                m_cf = re.search(r'name="confirm"\s+value="([^"]+)"', html)
+                if m_id and m_cf:
+                    file_id = m_id.group(1)
+                    confirm = m_cf.group(1)
+                    dl_url = "https://drive.usercontent.google.com/download"
+                    dl_params = {
+                        "id": file_id,
+                        "export": "download",
+                        "confirm": confirm,
+                    }
+                    logger.info(
+                        "%s: Detected Google Drive interstitial; "
+                        "retrying via %s with confirm token.",
+                        label,
+                        dl_url,
+                    )
+                else:
+                    logger.warning(
+                        "%s: HTML response from Google Drive, but could not find "
+                        "confirm token; aborting download.",
+                        label,
+                    )
+                    return
+            elif "text/html" in ctype:
+                logger.warning(
+                    "%s: URL returned HTML (not a file); aborting download.",
+                    label,
+                )
+                return
+
+            # Second request: actual file bytes (streamed to disk)
+            logger.info("%s: downloading file content ...", label)
+            r2 = s.get(dl_url, params=dl_params, stream=True, timeout=600)
+            r2.raise_for_status()
             with open(tmp_zip, "wb") as f:
-                for chunk in r.iter_content(chunk_size=1024 * 1024):
+                for chunk in r2.iter_content(chunk_size=1024 * 1024):
                     if chunk:
                         f.write(chunk)
 
@@ -223,77 +283,13 @@ def _download_zip_to_dir(url: str, dest_dir: Path, label: str) -> None:
             tmp_zip.stat().st_size,
         )
 
+        # Now treat it as a normal ZIP
         with zipfile.ZipFile(tmp_zip, "r") as z:
             z.extractall(dest_dir)
         logger.info("%s: zip extracted into %s", label, dest_dir)
 
-        try:
-            tmp_zip.unlink()
-        except Exception:
-            pass
-
     except Exception as e:
         logger.warning("Failed to download/extract %s zip: %s", label, e)
-
-
-
-def ensure_onnx_from_zip() -> None:
-    """
-    Ensure ONNX_MODEL_PATH exists by downloading and extracting ONNX_ZIP_URL.
-
-    - Fully cleans the /onnx volume first so we don't hit "No space left on device".
-    - Assumes ONNX_ZIP_URL points to a ZIP that contains model.onnx somewhere
-      under an `onnx/` folder (e.g. onnx/model.onnx).
-    """
-    url = _clean_env_url("ONNX_ZIP_URL")
-    if not url:
-        logger.warning("ONNX_ZIP_URL not set or empty; skipping ONNX download.")
-        return
-
-    # Hard-clean the ONNX directory so old partial downloads don't fill the volume.
-    try:
-        if ONNX_DIR.exists():
-            for child in ONNX_DIR.iterdir():
-                if child.is_file():
-                    child.unlink()
-                elif child.is_dir():
-                    shutil.rmtree(child)
-            logger.info("Cleared ONNX_DIR %s before download.", ONNX_DIR)
-    except Exception as e:
-        logger.warning("Failed to clean ONNX_DIR before download: %s", e)
-
-    ONNX_DIR.mkdir(parents=True, exist_ok=True)
-
-    # Download ZIP to /app (root FS), *not* inside the volume.
-    tmp_zip = Path("/app") / "onnx_download.zip"
-    try:
-        if tmp_zip.exists():
-            tmp_zip.unlink()
-    except Exception:
-        pass
-
-    try:
-        logger.info("ONNX: downloading from %s ...", url)
-        with requests.get(url, stream=True, timeout=600) as r:
-            r.raise_for_status()
-            with open(tmp_zip, "wb") as f:
-                for chunk in r.iter_content(chunk_size=1024 * 1024):
-                    if chunk:
-                        f.write(chunk)
-
-        logger.info(
-            "ONNX: download finished: %s (size=%s bytes)",
-            tmp_zip,
-            tmp_zip.stat().st_size,
-        )
-
-        # Extract ZIP contents into the volume
-        with zipfile.ZipFile(tmp_zip, "r") as z:
-            z.extractall(ONNX_DIR)
-        logger.info("ONNX: zip extracted into %s", ONNX_DIR)
-
-    except Exception as e:
-        logger.warning("Failed to download/extract ONNX zip: %s", e)
     finally:
         try:
             if tmp_zip.exists():
@@ -301,7 +297,37 @@ def ensure_onnx_from_zip() -> None:
         except Exception:
             pass
 
-    # After extraction, look for exactly one *.onnx and rename it to model.onnx
+
+def ensure_onnx_from_zip() -> None:
+    """
+    Ensure ONNX_MODEL_PATH exists by downloading and extracting ONNX_ZIP_URL.
+
+    - Fully cleans the /onnx volume first so we don't hit "No space left on device".
+    - Handles Google Drive share links using _download_zip_to_dir.
+    """
+    url = _clean_env_url("ONNX_ZIP_URL")
+    if not url:
+        logger.warning("ONNX_ZIP_URL not set or empty; skipping ONNX download.")
+        return
+
+    # Clean the ONNX dir (old stuff takes space)
+    try:
+        if ONNX_DIR.exists():
+            for child in ONNX_DIR.iterdir():
+                if child.is_file():
+                    child.unlink()
+                elif child.is_dir():
+                    shutil.rmtree(child)
+            logger.info("Cleared ONNX_DIR %s before ONNX download.", ONNX_DIR)
+    except Exception as e:
+        logger.warning("Failed to clean ONNX_DIR before download: %s", e)
+
+    ONNX_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Download + unzip
+    _download_zip_to_dir(url, ONNX_DIR, "ONNX")
+
+    # After extraction, look for *.onnx and rename to model.onnx if needed
     if not ONNX_MODEL_PATH.exists():
         candidates = list(ONNX_DIR.rglob("*.onnx"))
         if len(candidates) == 1:
@@ -328,54 +354,12 @@ def ensure_onnx_from_zip() -> None:
         logger.warning("ONNX_MODEL_PATH still missing after ensure_onnx_from_zip().")
 
 
-# 1) ONNX session (with optional remote download)
-try:
-    if not ONNX_MODEL_PATH.exists():
-        ensure_onnx_from_zip()
-
-    if ONNX_MODEL_PATH.exists():
-        logger.info("Initializing ONNX session from %s", ONNX_MODEL_PATH)
-        ONNX_SESSION = ort.InferenceSession(
-            str(ONNX_MODEL_PATH),
-            providers=["CPUExecutionProvider"],
-        )
-        onnx_inputs = [i.name for i in ONNX_SESSION.get_inputs()]
-        logger.info(
-            "ONNX model loaded from %s (inputs=%s)",
-            ONNX_MODEL_PATH,
-            onnx_inputs,
-        )
-    else:
-        ONNX_SESSION = None
-        logger.warning("ONNX model not found at %s", ONNX_MODEL_PATH)
-except Exception as e:
-    ONNX_SESSION = None
-    logger.warning("Failed to initialize ONNX session: %s", e)
-
-def ensure_tokenizer_from_zip() -> None:
-    """
-    Ensure TOKENIZER_DIR contains a valid GPT-2 tokenizer.
-    If missing/empty, download TOKENIZER_ZIP_URL and extract into TOKENIZER_DIR.
-    """
-    if TOKENIZER_DIR.exists() and any(TOKENIZER_DIR.iterdir()):
-        return
-
-    url = _clean_env_url("TOKENIZER_ZIP_URL")
-    if not url:
-        logger.warning("TOKENIZER_ZIP_URL not set or empty; skipping tokenizer download.")
-        return
-
-    logger.info("TOKENIZER_ZIP_URL (cleaned) = %r", url)
-    _download_zip_to_dir(url, TOKENIZER_DIR, "TOKENIZER")
-
-
 # ────────── ONNX + Tokenizer Init ──────────
 TOKENIZER = None
 ONNX_SESSION = None  # will become an onnxruntime.InferenceSession after init
 
-# 1) ONNX session (always refresh from remote)
+# 1) ONNX session
 try:
-    # Always re-download/extract model.onnx from ONNX_ZIP_URL on startup
     ensure_onnx_from_zip()
 
     if ONNX_MODEL_PATH.exists():
