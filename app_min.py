@@ -50,7 +50,7 @@ except ImportError:
 
 from types import SimpleNamespace
 
-ENABLE_ONNX = os.getenv("ENABLE_ONNX", "true").strip().lower() in ("1", "true", "yes", "y")
+ENABLE_ONNX = False   # Hard-off for prelaunch stability
 ONNX_ZIP_URL = (os.getenv("ONNX_ZIP_URL") or "").strip()
 TOKENIZER_ZIP_URL = (os.getenv("TOKENIZER_ZIP_URL") or "").strip()
 
