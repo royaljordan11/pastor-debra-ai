@@ -168,6 +168,7 @@ ONNX_MODEL_PATH = ONNX_DIR / "model.onnx"
 # Hugging Face tokenizer lives in ./tokenizer
 TOKENIZER_DIR = BASE_DIR / "tokenizer"
 TOKENIZER_DIR.mkdir(parents=True, exist_ok=True)
+MODEL_TOKENIZER_PATH = TOKENIZER_DIR  # keep for compatibility
 
 # Kept for backward compatibility if referenced elsewhere
 MODEL_TOKENIZER_PATH = TOKENIZER_DIR
