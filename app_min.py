@@ -6953,8 +6953,6 @@ def build_year_based_prophetic_word(
     Build a more human, non-repetitive prophetic word
     when the user mentions a specific future year (2024–2039).
     """
-    import random
-    import re
 
     text = (user_text or "").strip()
 
@@ -8437,6 +8435,87 @@ def chat():
                 }), 200
         except Exception as e:
             logger.warning("FAQ handler error: %s", e)
+
+                # ── HARD FAST-PATH: right-panel "Ask Pastor Debra" destiny-theme button ──
+        try:
+            try:
+                t_norm = _normalize_simple(user_text or "")
+            except Exception:
+                t_norm = (user_text or "").lower()
+
+            # The button text always mentions "Christ-centered destiny theme"
+            if "christ centered destiny theme" in t_norm or \
+               "christ-centered destiny theme" in t_norm:
+                full_name = (data.get("name") or data.get("full_name") or "").strip()
+                birthdate = (data.get("birthdate") or data.get("dob") or "").strip()
+
+                theme_guess = _maybe_theme_from_profile(full_name, birthdate)
+                # theme_guess is usually (num, title, meaning)
+                theme_num = None
+                theme_title = None
+                theme_meaning = None
+                if isinstance(theme_guess, tuple) and len(theme_guess) >= 2:
+                    theme_num = theme_guess[0]
+                    theme_title = theme_guess[1]
+                    if len(theme_guess) >= 3:
+                        theme_meaning = theme_guess[2]
+
+                if not theme_title:
+                    theme_title = "your God-given theme"
+
+                # Use your existing counsel generator for "calling" + theme
+                out = None
+                try:
+                    out = build_pastoral_counsel("calling", theme_guess)
+                except Exception as e:
+                    logger.warning("build_pastoral_counsel('calling', theme_guess) failed: %s", e)
+                    out = None
+
+                # Guaranteed fallback text if that ever fails
+                if not out:
+                    scripture = (
+                        "Scripture (Matthew 5:14–16): "
+                        "“You are the light of the world… let your light shine before others…”"
+                    )
+                    step = (
+                        "One practical step: write down one place this week where you sense God is "
+                        "asking you to “turn on the light” — a conversation, a phone call, an act "
+                        "of encouragement — and do it prayerfully, as worship."
+                    )
+
+                    intro = (
+                        f"My name is Pastor Debra Jordan. Because your Christ-centered destiny "
+                        f"theme is **{theme_title}**, I want to speak to you as someone who carries "
+                        f"that grace. This theme points to how God wired you to reflect Christ.\n\n"
+                    )
+                    if theme_meaning:
+                        intro += f"**What this theme whispers:** {theme_meaning.capitalize()}.\n\n"
+
+                    out = intro + scripture + "\n\n" + step
+
+                    out = expand_scriptures_in_text(out)
+
+                # Optional cites for UI
+                try:
+                    hits_all = blended_search(user_text)
+                    hits_ctx = filter_hits_for_context(hits_all, "advice")
+                    cites = format_cites(hits_ctx)
+                except Exception:
+                    cites = []
+
+                return jsonify({
+                    "messages": [{
+                        "role": "assistant",
+                        "model": "advice",
+                        "text": out,
+                        "cites": cites,
+                    }]
+                }), 200
+
+        except Exception as e:
+            logger.exception("Ask-Pastor-Debra hard fast-path failed: %s", e)
+            # if anything breaks here, just fall through to normal routing
+
 
         # ── Retrieval + routing ──────────────────────────────────────────────
         try:
