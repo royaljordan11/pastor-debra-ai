@@ -6904,10 +6904,7 @@ def answer_faces_of_eve_or_books(user_text: str) -> Optional[str]:
 
     return None  # not a Faces/Books question
 
-    "master repairer",
-    "prophetic beacon",
-    "mystic scholar",
-]
+
 
 
 
