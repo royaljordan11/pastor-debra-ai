@@ -8166,7 +8166,6 @@ def chat():
         except Exception as e:
             logger.exception("Prophetic fast-path failed: %s", e)
 
-        # ── Advice fast-path (ONLY when intent is 'advice') ──────────────────
         # ── Advice fast-path (ONLY when intent is 'advice') ────────────────────
         def _has_donation_cues(s: str) -> bool:
             try:
@@ -8176,61 +8175,131 @@ def chat():
             DONATE = r"(?:donat(?:e|ed)|giv(?:e|en|ing)|gift(?:ed)?|seed(?:ed)?)"
             EIGHTM = r"(?:8\s*[,\.]?\s*m(?:illion)?|eight\s+million|\$?\s*8[, ]?0{3}[, ]?0{3})"
             SCHOOL = r"(?:virginia(?:\s*union)?\s*(?:university)?|vuu)"
-            return bool(re.search(DONATE, t, re.I) or
-                        re.search(EIGHTM, t, re.I) or
-                        re.search(SCHOOL, t, re.I))
+            return (
+                bool(re.search(DONATE, t, re.I)) or
+                bool(re.search(EIGHTM, t, re.I)) or
+                bool(re.search(SCHOOL, t, re.I))
+            )
 
-        # extra regex to detect the "Ask Pastor Debra about my destiny theme" text
+        # Detect the auto-text from the "Ask Pastor Debra about this" button
         ASK_THEME_RX = re.compile(
             r"christ[- ]centered destiny theme|would you give me personal counsel",
             re.IGNORECASE,
         )
 
-        category = None
         if intent_now == "advice" and not _has_donation_cues(user_text):
             try:
-                # normal classifier first
-                category = _advice_category(user_text)  # "anxiety","marriage","calling","week", etc.
-            except Exception as e:
-                logger.warning("_advice_category failed: %s", e)
+                # FIRST: special path for the right-side "Ask Pastor Debra" button
+                if ASK_THEME_RX.search(user_text or ""):
+                    full_name = (data.get("name") or data.get("full_name") or "").strip()
+                    birthdate = (data.get("birthdate") or data.get("dob") or "").strip()
+                    theme_guess = _maybe_theme_from_profile(full_name, birthdate)
+
+                    # theme_guess is usually (num, title, meaning)
+                    theme_num = None
+                    theme_title = None
+                    theme_meaning = None
+                    if isinstance(theme_guess, tuple) and len(theme_guess) >= 2:
+                        theme_num = theme_guess[0]
+                        theme_title = theme_guess[1]
+                        if len(theme_guess) >= 3:
+                            theme_meaning = theme_guess[2]
+
+                    # Fallback if something is missing
+                    if not theme_title:
+                        theme_title = "your God-given theme"
+
+                    # Try to use your existing helper first
+                    out = None
+                    try:
+                        out = build_pastoral_counsel("calling", theme_guess)
+                    except Exception as e:
+                        logger.warning(
+                            "build_pastoral_counsel('calling', theme_guess) failed: %s", e
+                        )
+                        out = None
+
+                    # If helper failed or just to be safe, create a simple theme-based counsel
+                    if not out:
+                        # Very lightweight generic counsel that always gives:
+                        # 1) one Scripture
+                        # 2) one practical step
+                        scripture = (
+                            "Scripture (Matthew 5:14–16): "
+                            "“You are the light of the world… let your light shine before others…”"
+                        )
+                        step = (
+                            "One practical step: write down one place this week where you sense God is "
+                            "asking you to “turn on the light” — a conversation, a phone call, an act of "
+                            "encouragement — and do it prayerfully, as worship."
+                        )
+
+                        intro = (
+                            f"My name is Pastor Debra Jordan. Because your Christ-centered destiny "
+                            f"theme is **{theme_title}**, I want to speak to you as someone who carries "
+                            f"that grace. This theme points to how God wired you to reflect Christ.\n\n"
+                        )
+
+                        if theme_meaning:
+                            intro += (
+                                f"**What this theme whispers:** {theme_meaning.capitalize()}.\n\n"
+                            )
+
+                        out = intro + scripture + "\n\n" + step
+
+                    out = expand_scriptures_in_text(out)
+
+                    # Optional cites (not critical for this path)
+                    try:
+                        hits_all = blended_search(user_text)
+                        hits_ctx = filter_hits_for_context(hits_all, "advice")
+                        cites = format_cites(hits_ctx)
+                    except Exception:
+                        cites = []
+
+                    return jsonify({
+                        "messages": [{
+                            "role": "assistant",
+                            "model": "advice",
+                            "text": out,
+                            "cites": cites,
+                        }]
+                    }), 200
+
+                # SECOND: normal advice classifier path for other advice queries
                 category = None
-
-            # NEW: if classifier didn't recognise it, but it looks like the
-            # "Ask Pastor Debra about this theme" button, treat it as "calling"
-            if category is None and ASK_THEME_RX.search(user_text or ""):
-                category = "calling"
-                logger.debug("advice_category override='calling' for Ask-Theme pattern")
-
-            logger.debug("advice_category=%s", category)
-
-        if category:
-            try:
-                full_name = (data.get("name") or data.get("full_name") or "").strip()
-                birthdate = (data.get("birthdate") or data.get("dob") or "").strip()
-                theme_guess = _maybe_theme_from_profile(full_name, birthdate)
-
-                # Base Pastor Debra counsel text (one scripture + one step)
-                out = build_pastoral_counsel(category, theme_guess)
-
-                # You can still let the scripture expander run
-                out = expand_scriptures_in_text(out)
-
-                # Optional cites for UI
                 try:
-                    hits_all = blended_search(user_text)
-                    hits_ctx = filter_hits_for_context(hits_all, "advice")
-                    cites = format_cites(hits_ctx)
-                except Exception:
-                    cites = []
+                    category = _advice_category(user_text)  # "anxiety","marriage","calling","week", etc.
+                except Exception as e:
+                    logger.warning("_advice_category failed: %s", e)
+                    category = None
 
-                return jsonify({
-                    "messages": [{
-                        "role": "assistant",
-                        "model": "advice",
-                        "text": out,
-                        "cites": cites
-                    }]
-                }), 200
+                logger.debug("advice_category=%s", category)
+
+                if category:
+                    full_name = (data.get("name") or data.get("full_name") or "").strip()
+                    birthdate = (data.get("birthdate") or data.get("dob") or "").strip()
+                    theme_guess = _maybe_theme_from_profile(full_name, birthdate)
+
+                    out = build_pastoral_counsel(category, theme_guess)
+                    out = expand_scriptures_in_text(out)
+
+                    try:
+                        hits_all = blended_search(user_text)
+                        hits_ctx = filter_hits_for_context(hits_all, "advice")
+                        cites = format_cites(hits_ctx)
+                    except Exception:
+                        cites = []
+
+                    return jsonify({
+                        "messages": [{
+                            "role": "assistant",
+                            "model": "advice",
+                            "text": out,
+                            "cites": cites,
+                        }]
+                    }), 200
+
             except Exception as e:
                 logger.exception("Advice fast-path failed: %s", e)
                 # fall through to normal routing if something breaks
