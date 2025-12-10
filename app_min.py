@@ -48,6 +48,13 @@ except ImportError:
     torch = None
 
 
+from types import SimpleNamespace
+
+ENABLE_ONNX = os.getenv("ENABLE_ONNX", "true").strip().lower() in ("1", "true", "yes", "y")
+ONNX_ZIP_URL = (os.getenv("ONNX_ZIP_URL") or "").strip()
+TOKENIZER_ZIP_URL = (os.getenv("TOKENIZER_ZIP_URL") or "").strip()
+
+
 # ────────── Small helpers ──────────
 def _get_bool(env_key: str, default: bool) -> bool:
     v = os.getenv(env_key)
@@ -7978,7 +7985,7 @@ def get_videos():
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
-        # ── Rate-limit ───────────────────────────────────────────────────────────
+        # ── Rate-limit ─────────────────────────────────────────────────────────
         ip = (request.headers.get("X-Forwarded-For", request.remote_addr or "0.0.0.0")
               .split(",")[0].strip())
         if _throttle(ip):
@@ -7992,7 +7999,7 @@ def chat():
                 }]
             }), 429
 
-        # ── Parse payload safely ────────────────────────────────────────────────
+        # ── Parse payload safely ──────────────────────────────────────────────
         data = request.get_json(force=False, silent=True) or {}
         msgs = data.get("messages", [])
         active_model = (data.get("active_model") or "auto").strip().lower()
@@ -8055,7 +8062,7 @@ def chat():
         except Exception as e:
             logger.warning("POME fast-path error: %s", e)
 
-        # ── DEF quick menu (explicit) ──────────────────────────────────────────
+        # ── DEF quick menu (explicit) ────────────────────────────────────────
         try:
             if bool(data.get("def_chat")) or _DEF_TRIGGERS.match(user_text or ""):
                 full_name = (data.get("name") or data.get("full_name") or "").strip()
@@ -8076,7 +8083,7 @@ def chat():
         except Exception as e:
             logger.exception("DEF menu block failed: %s", e)
 
-        # ── Identity fast-path (e.g., “r u pastor debra?”) ─────────────────────
+        # ── Identity fast-path (e.g., “r u pastor debra?”) ───────────────────
         try:
             if IDENTITY_PAT.search(user_text):
                 out = identity_answer()
@@ -8091,7 +8098,7 @@ def chat():
         except Exception as e:
             logger.warning("Identity fast-path error: %s", e)
 
-        # ── Intent detection ───────────────────────────────────────────────────
+        # ── Intent detection ─────────────────────────────────────────────────
         try:
             intent_now = detect_intent(user_text)
         except Exception as e:
@@ -8100,20 +8107,22 @@ def chat():
 
         logger.debug("intent=%s | text=%r", intent_now, user_text[:160])
 
-        # ── DONATION: HARD STOP (terminal path) ────────────────────────────────
+        # ── DONATION: HARD STOP (terminal path) ──────────────────────────────
         if intent_now == "donation":
             try:
-                donation_msg = answer_pastor_debra_faq(user_text)  # answers donation first internally
+                donation_msg = answer_pastor_debra_faq(user_text)
             except Exception:
                 donation_msg = None
 
             if not donation_msg:
-                donation_msg = ("Yes—our house sowed an $8M gift as a seed for the future. "
-                                "Education is discipleship of the mind; when you expand what people can learn, "
-                                "you expand what they can become. This investment strengthens scholarship, "
-                                "leadership formation, and technology capacity—including responsible AI literacy—"
-                                "so more minority scholars, pastors, and innovators can serve the Church and the world.\n"
-                                "Scripture: Proverbs 4:7; 2 Timothy 2:15")
+                donation_msg = (
+                    "Yes—our house sowed an $8M gift as a seed for the future. "
+                    "Education is discipleship of the mind; when you expand what people can learn, "
+                    "you expand what they can become. This investment strengthens scholarship, "
+                    "leadership formation, and technology capacity—including responsible AI literacy—"
+                    "so more minority scholars, pastors, and innovators can serve the Church and the world.\n"
+                    "Scripture: Proverbs 4:7; 2 Timothy 2:15"
+                )
             donation_msg = expand_scriptures_in_text(donation_msg)
 
             return jsonify({
@@ -8125,7 +8134,7 @@ def chat():
                 }]
             }), 200
 
-        # ── Prophetic fast-path (theme-based, for UI “Ask Prophetic” button) ───
+        # ── Prophetic fast-path (theme-based, for UI “Ask Prophetic”) ────────
         try:
             if intent_now == "prophetic" and not PROPHECY_KEYWORDS.search(user_text or ""):
                 full_name = (data.get("name") or data.get("full_name") or "").strip()
@@ -8139,7 +8148,6 @@ def chat():
                 )
                 out = expand_scriptures_in_text(out)
 
-                # Optional cites for UI
                 try:
                     hits_all = blended_search(user_text)
                     hits_ctx = filter_hits_for_context(hits_all, "prophetic")
@@ -8157,9 +8165,8 @@ def chat():
                 }), 200
         except Exception as e:
             logger.exception("Prophetic fast-path failed: %s", e)
-            # fall through to normal routing
 
-        # ── Advice fast-path (ONLY when intent is 'advice') ────────────────────
+        # ── Advice fast-path (ONLY when intent is 'advice') ──────────────────
         def _has_donation_cues(s: str) -> bool:
             try:
                 t = _normalize_simple(s or "")
@@ -8173,7 +8180,7 @@ def chat():
         category = None
         if intent_now == "advice" and not _has_donation_cues(user_text):
             try:
-                category = _advice_category(user_text)  # "anxiety","marriage","calling","week", etc.
+                category = _advice_category(user_text)
             except Exception as e:
                 logger.warning("_advice_category failed: %s", e)
                 category = None
@@ -8188,7 +8195,6 @@ def chat():
                 out = build_pastoral_counsel(category, theme_guess)
                 out = expand_scriptures_in_text(out)
 
-                # Optional cites for UI
                 try:
                     hits_all = blended_search(user_text)
                     hits_ctx = filter_hits_for_context(hits_all, "advice")
@@ -8206,9 +8212,8 @@ def chat():
                 }), 200
             except Exception as e:
                 logger.exception("Advice fast-path failed: %s", e)
-                # continue
 
-        # --- Faces-of-Eve / Books fast-path (JSON-backed) ----------------------
+        # --- Faces-of-Eve / Books fast-path (JSON-backed) --------------------
         try:
             maybe_faces = answer_faces_of_eve_or_books(user_text)
             if maybe_faces:
@@ -8229,7 +8234,7 @@ def chat():
         except Exception as e:
             logger.warning("Faces-of-Eve fast-path error: %s", e)
 
-        # ── Destiny claim (“my destiny theme is N”) ────────────────────────────
+        # ── Destiny claim (“my destiny theme is N”) ──────────────────────────
         try:
             claim = _destiny_claim_counsel(user_text)
             if claim:
@@ -8245,7 +8250,7 @@ def chat():
         except Exception as e:
             logger.warning("Destiny-claim handler error: %s", e)
 
-        # ── FAQ / Bio quick answers (includes identity/palm/etc.) ─────────────
+        # ── FAQ / Bio quick answers (includes identity/palm/etc.) ────────────
         try:
             faq_reply = answer_pastor_debra_faq(user_text)
             if faq_reply:
@@ -8261,7 +8266,7 @@ def chat():
         except Exception as e:
             logger.warning("FAQ handler error: %s", e)
 
-        # ── Retrieval + routing ────────────────────────────────────────────────
+        # ── Retrieval + routing ──────────────────────────────────────────────
         try:
             hits_all = blended_search(user_text)
         except Exception as e:
@@ -8276,7 +8281,7 @@ def chat():
             logger.exception("Context/cites failed: %s", e)
             hits_ctx, cites = [], []
 
-        # ── NEW: Comfort / scripture-topic detection + short rolling history ───
+        # ── NEW: Comfort / scripture-topic detection + short rolling history ─
         comfort_mode = is_in_distress(user_text)
 
         topic = None
@@ -8308,7 +8313,6 @@ def chat():
                 role = m.get("role") or "user"
                 text = (m.get("text") or "").strip()
                 if text:
-                    # map frontend roles to OpenAI-style roles if needed
                     if role not in ("user", "assistant", "system"):
                         role = "user"
                     recent_history.append({"role": role, "content": text})
@@ -8316,44 +8320,42 @@ def chat():
             logger.warning("Failed to build recent_history: %s", e)
             recent_history = []
 
-        # ── Model selection ────────────────────────────────────────────────────
+        # ── Model selection (T5 logic + GPT safety) ──────────────────────────
         try:
-            # For explicit prophetic *text* (user typed a prophecy request),
-            # force GPT so gpt_answer()’s prophetic engine is used.
-            if intent_now == "prophetic" and PROPHECY_KEYWORDS.search(user_text or ""):
-                if OPENAI_API_KEY:
-                    model_choice = "gpt"
-                else:
-                    model_choice = "t5" if t5_onnx.ok else "faq_fallback"
-
-            elif active_model in ("t5", "gpt"):
-                if active_model == "gpt" and not OPENAI_API_KEY:
-                    model_choice = "t5" if t5_onnx.ok else "faq_fallback"
-                else:
-                    model_choice = active_model
-
+            if not OPENAI_API_KEY and not getattr(t5_onnx, "ok", False):
+                # no GPT and no ONNX – fallback only
+                model_choice = "fallback"
             else:
-                model_choice = choose_model(user_text, hits_all, t5_onnx.ok)
+                # explicit prophetic *text* → force GPT engine
+                if intent_now == "prophetic" and PROPHECY_KEYWORDS.search(user_text or ""):
+                    model_choice = "gpt"
+                elif active_model in ("t5", "gpt"):
+                    model_choice = active_model
+                else:
+                    model_choice = choose_model(user_text, hits_all, getattr(t5_onnx, "ok", False))
         except Exception as e:
             logger.exception("choose_model failed: %s", e)
-            model_choice = "faq_fallback"
+            model_choice = "fallback"
 
-        # ── Generate ───────────────────────────────────────────────────────────
+        # ── Generate (T5-style logic, GPT-backed when ONNX off) ──────────────
         try:
             if model_choice == "t5":
-                # *** KEY CHANGE ***
-                # Always build the T5-style prompt
+                # Build the same prompt you’d send to T5
                 prompt = build_t5_prompt(user_text, hits_all)
 
-                if t5_onnx.ok:
-                    # Normal ONNX path (for local / future bigger server)
-                    out = t5_onnx.generate(prompt, max_new_tokens=160) or ""
-                else:
-                    # ONNX not available (e.g., Railway prelaunch) – route the
-                    # *same* T5 prompt into GPT so GPT follows T5 logic.
-                    logger.warning("T5 requested but ONNX unavailable; sending T5-style prompt to GPT.")
+                out = ""
+                if getattr(t5_onnx, "ok", False):
+                    # Real ONNX path (e.g., local dev or future beefier server)
+                    try:
+                        out = t5_onnx.generate(prompt, max_new_tokens=160) or ""
+                    except Exception as e:
+                        logger.exception("t5_onnx.generate failed, falling back to GPT: %s", e)
+
+                if not out and OPENAI_API_KEY:
+                    # Prelaunch path: ONNX disabled → run the T5 prompt through GPT
+                    logger.warning("ONNX unavailable — routing T5-style prompt to GPT.")
                     out = gpt_answer(
-                        prompt,           # use the composed T5 prompt as the "user text"
+                        prompt,           # use composed T5-style prompt
                         hits_all,
                         no_cache=no_cache,
                         comfort_mode=comfort_mode,
@@ -8362,21 +8364,28 @@ def chat():
                     )
 
                 if not out:
-                    # Extra safety: if something still fails, do one more GPT call.
+                    # Last safety net if everything above fails
                     out = gpt_answer(
-                        prompt,
+                        user_text,
                         hits_all,
                         no_cache=no_cache,
                         comfort_mode=comfort_mode,
                         scripture_hint=scripture_hint,
                         history=recent_history,
+                    ) if OPENAI_API_KEY else ""
+
+                if not out:
+                    safe = (
+                        "Let’s invite the Lord into this moment. Scripture: Matthew 11:28\n"
+                        "Prayer: Jesus, steady our hearts and show one faithful next step. Amen.\n"
+                        "What’s one small action you can take today?"
                     )
+                    out = safe
 
                 out = expand_scriptures_in_text(out)
-                # For the frontend you can still label it as "t5"
                 resp = {"role": "assistant", "model": "t5", "text": out, "cites": cites}
 
-            elif model_choice == "gpt":
+            elif model_choice == "gpt" and OPENAI_API_KEY:
                 out = gpt_answer(
                     user_text,
                     hits_all,
@@ -8389,20 +8398,27 @@ def chat():
                 resp = {"role": "assistant", "model": "gpt", "text": out, "cites": cites}
 
             else:
-                # Pastoral safety fallback (coherent, consistent)
-                safe = ("Let’s invite the Lord into this moment. Scripture: Matthew 11:28\n"
-                        "Prayer: Jesus, steady our hearts and show one faithful next step. Amen.\n"
-                        "What’s one small action you can take today?")
-                resp = {"role": "assistant", "model": "fallback",
-                        "text": expand_scriptures_in_text(safe), "cites": cites}
+                safe = (
+                    "Let’s invite the Lord into this moment. Scripture: Matthew 11:28\n"
+                    "Prayer: Jesus, steady our hearts and show one faithful next step. Amen.\n"
+                    "What’s one small action you can take today?"
+                )
+                resp = {
+                    "role": "assistant",
+                    "model": "fallback",
+                    "text": expand_scriptures_in_text(safe),
+                    "cites": cites,
+                }
 
             return jsonify({"messages": [resp]}), 200
 
         except Exception as e:
             logger.exception("Generation block failed: %s", e)
-            safe = ("Let’s invite the Lord into this moment. Scripture: Matthew 11:28\n"
-                    "Prayer: Jesus, steady our hearts and show one faithful next step. Amen.\n"
-                    "What’s one small action you can take today?")
+            safe = (
+                "Let’s invite the Lord into this moment. Scripture: Matthew 11:28\n"
+                "Prayer: Jesus, steady our hearts and show one faithful next step. Amen.\n"
+                "What’s one small action you can take today?"
+            )
             return jsonify({
                 "messages": [{
                     "role": "assistant",
@@ -8420,6 +8436,7 @@ def chat():
                 "text": "Something went wrong. Let’s try again."
             }]
         }), 200
+
 
 
 # ────────── Ops ──────────
