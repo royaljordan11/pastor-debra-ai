@@ -236,28 +236,72 @@ def _download_zip_to_dir(url: str, dest_dir: Path, label: str) -> None:
         logger.warning("Failed to download/extract %s zip: %s", label, e)
 
 
+
 def ensure_onnx_from_zip() -> None:
     """
-    Always refresh ONNX_MODEL_PATH from ONNX_ZIP_URL on startup.
-    Overwrites any previous model.onnx.
+    Ensure ONNX_MODEL_PATH exists by downloading and extracting ONNX_ZIP_URL.
+
+    - Fully cleans the /onnx volume first so we don't hit "No space left on device".
+    - Assumes ONNX_ZIP_URL points to a ZIP that contains model.onnx somewhere
+      under an `onnx/` folder (e.g. onnx/model.onnx).
     """
-    url = (os.getenv("ONNX_ZIP_URL") or "").strip()
+    url = _clean_env_url("ONNX_ZIP_URL")
     if not url:
-        logger.warning("ONNX_ZIP_URL not set; skipping ONNX download.")
+        logger.warning("ONNX_ZIP_URL not set or empty; skipping ONNX download.")
         return
 
-    # Clean out any existing .onnx so we don't reuse a corrupted file
+    # Hard-clean the ONNX directory so old partial downloads don't fill the volume.
     try:
-        if ONNX_MODEL_PATH.exists():
-            logger.info("Deleting existing ONNX model at %s", ONNX_MODEL_PATH)
-            ONNX_MODEL_PATH.unlink()
+        if ONNX_DIR.exists():
+            for child in ONNX_DIR.iterdir():
+                if child.is_file():
+                    child.unlink()
+                elif child.is_dir():
+                    shutil.rmtree(child)
+            logger.info("Cleared ONNX_DIR %s before download.", ONNX_DIR)
     except Exception as e:
-        logger.warning("Failed to delete old ONNX model: %s", e)
+        logger.warning("Failed to clean ONNX_DIR before download: %s", e)
 
-    logger.info("ensure_onnx_from_zip: refreshing ONNX from %s", url)
-    _download_zip_to_dir(url, ONNX_DIR, "ONNX")
+    ONNX_DIR.mkdir(parents=True, exist_ok=True)
 
-    # After extraction, look for a .onnx file
+    # Download ZIP to /app (root FS), *not* inside the volume.
+    tmp_zip = Path("/app") / "onnx_download.zip"
+    try:
+        if tmp_zip.exists():
+            tmp_zip.unlink()
+    except Exception:
+        pass
+
+    try:
+        logger.info("ONNX: downloading from %s ...", url)
+        with requests.get(url, stream=True, timeout=600) as r:
+            r.raise_for_status()
+            with open(tmp_zip, "wb") as f:
+                for chunk in r.iter_content(chunk_size=1024 * 1024):
+                    if chunk:
+                        f.write(chunk)
+
+        logger.info(
+            "ONNX: download finished: %s (size=%s bytes)",
+            tmp_zip,
+            tmp_zip.stat().st_size,
+        )
+
+        # Extract ZIP contents into the volume
+        with zipfile.ZipFile(tmp_zip, "r") as z:
+            z.extractall(ONNX_DIR)
+        logger.info("ONNX: zip extracted into %s", ONNX_DIR)
+
+    except Exception as e:
+        logger.warning("Failed to download/extract ONNX zip: %s", e)
+    finally:
+        try:
+            if tmp_zip.exists():
+                tmp_zip.unlink()
+        except Exception:
+            pass
+
+    # After extraction, look for exactly one *.onnx and rename it to model.onnx
     if not ONNX_MODEL_PATH.exists():
         candidates = list(ONNX_DIR.rglob("*.onnx"))
         if len(candidates) == 1:
@@ -282,6 +326,31 @@ def ensure_onnx_from_zip() -> None:
         )
     else:
         logger.warning("ONNX_MODEL_PATH still missing after ensure_onnx_from_zip().")
+
+
+# 1) ONNX session (with optional remote download)
+try:
+    if not ONNX_MODEL_PATH.exists():
+        ensure_onnx_from_zip()
+
+    if ONNX_MODEL_PATH.exists():
+        logger.info("Initializing ONNX session from %s", ONNX_MODEL_PATH)
+        ONNX_SESSION = ort.InferenceSession(
+            str(ONNX_MODEL_PATH),
+            providers=["CPUExecutionProvider"],
+        )
+        onnx_inputs = [i.name for i in ONNX_SESSION.get_inputs()]
+        logger.info(
+            "ONNX model loaded from %s (inputs=%s)",
+            ONNX_MODEL_PATH,
+            onnx_inputs,
+        )
+    else:
+        ONNX_SESSION = None
+        logger.warning("ONNX model not found at %s", ONNX_MODEL_PATH)
+except Exception as e:
+    ONNX_SESSION = None
+    logger.warning("Failed to initialize ONNX session: %s", e)
 
 def ensure_tokenizer_from_zip() -> None:
     """
