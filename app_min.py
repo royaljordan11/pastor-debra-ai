@@ -54,16 +54,7 @@ ENABLE_ONNX = os.getenv("ENABLE_ONNX", "true").strip().lower() in ("1", "true", 
 ONNX_ZIP_URL = (os.getenv("ONNX_ZIP_URL") or "").strip()
 TOKENIZER_ZIP_URL = (os.getenv("TOKENIZER_ZIP_URL") or "").strip()
 
-# ------------------ ONNX BYPASS CONTROL ------------------
-# If ENABLE_ONNX is FALSE, we skip ALL ONNX logic immediately.
-if not ENABLE_ONNX:
-    logger.warning("ENABLE_ONNX = FALSE → Skipping all ONNX/T5 loading.")
-    ONNX_MODEL_PATH = None
-    T5_SESSION = None
-    TOKENIZER = None
 
-    def t5_enabled():
-        return False
 
 else:
     # Original ONNX setup continues ONLY when ENABLE_ONNX = TRUE
@@ -118,6 +109,16 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s :: %(message)s",
 )
 logger = logging.getLogger("pastor-debra-hybrid")
+
+# ------------------ ONNX BYPASS CONTROL ------------------
+if not ENABLE_ONNX:
+    logger.warning("ENABLE_ONNX = FALSE → Skipping all ONNX/T5 loading.")
+    ONNX_MODEL_PATH = None
+    T5_SESSION = None
+    TOKENIZER = None
+
+    def t5_enabled():
+        return False
 
 
 def _clean_env_url(env_key: str) -> str:
