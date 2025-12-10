@@ -115,6 +115,11 @@ if not ENABLE_ONNX:
 
     def t5_enabled():
         return False
+else:
+    # Original ONNX setup continues ONLY when ENABLE_ONNX = TRUE
+    def t5_enabled():
+        return ONNX_MODEL_PATH.exists()
+
 
 
 def _clean_env_url(env_key: str) -> str:
