@@ -304,10 +304,10 @@ def ensure_tokenizer_from_zip() -> None:
 TOKENIZER = None
 ONNX_SESSION = None  # will become an onnxruntime.InferenceSession after init
 
-# 1) ONNX session (with optional remote download)
+# 1) ONNX session (always refresh from remote)
 try:
-    if not ONNX_MODEL_PATH.exists():
-        ensure_onnx_from_zip()
+    # Always re-download/extract model.onnx from ONNX_ZIP_URL
+    ensure_onnx_from_zip()
 
     if ONNX_MODEL_PATH.exists():
         ONNX_SESSION = ort.InferenceSession(
@@ -323,6 +323,7 @@ try:
     else:
         ONNX_SESSION = None
         logger.warning("ONNX model not found at %s", ONNX_MODEL_PATH)
+
 except Exception as e:
     ONNX_SESSION = None
     logger.warning("Failed to initialize ONNX session: %s", e)
