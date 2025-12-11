@@ -3383,10 +3383,49 @@ def build_theme_counsel(theme_num: int, theme_title: str, theme_meaning: str) ->
         "and the assignments God trusts you with."
     )
 
-    # Simple per-theme scripture map (you can tweak these)
+    # Per-theme scriptures
     theme_scriptures = {
         22: {
-            "ref": "Isaiah
+            "ref": "Isaiah 58:12",
+            "text": "You shall be called the repairer of the breach.",
+        },
+        5: {
+            "ref": "Galatians 5:1",
+            "text": "It is for freedom that Christ has set us free.",
+        },
+        11: {
+            "ref": "2 Chronicles 20:20",
+            "text": (
+                "Believe in the LORD your God, and you shall be established; "
+                "believe His prophets, and you shall prosper."
+            ),
+        },
+        7: {
+            "ref": "Proverbs 25:2",
+            "text": (
+                "It is the glory of God to conceal a matter; "
+                "but the glory of kings is to search out a matter."
+            ),
+        },
+    }
+
+    scripture = theme_scriptures.get(theme_num, {
+        "ref": "Ephesians 2:10",
+        "text": "For we are His workmanship, created in Christ Jesus for good works.",
+    })
+
+    scripture_block = (
+        f"**Scripture:** {scripture['ref']}, “{scripture['text']}”"
+    )
+
+    step = (
+        "**One Practical Step:** Ask the Holy Spirit to highlight one area where this theme "
+        "is already active in your life. Begin stewarding it intentionally this week. "
+        "If you'd like, I can help you discern how this theme shows up in your relationships, "
+        "assignments, and the season you're stepping into right now."
+    )
+
+    return f"{intro}\n\n{prophetic}\n\n{spiritual}\n\n{scripture_block}\n\n{step}"
 
 
 DESTINY_THEME_MEANINGS = {
