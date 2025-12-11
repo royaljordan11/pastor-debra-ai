@@ -437,7 +437,7 @@
 @media (max-width: 900px) {
 
   /* CRITICAL: Override desktop grid for Safari */
-  #mainGrid.grid {
+  #mainGrid {
     display: flex !important;
     flex-direction: column !important;
     align-items: stretch !important;
@@ -452,33 +452,32 @@
     max-width: 100% !important;
   }
 
-/* FORCE override the desktop grid */
-.chat {
-  display: flex !important;
-  flex-direction: column !important;
-  grid-template-rows: none !important;   /* disable grid */
-  height: auto !important;               /* let the container grow */
-  max-height: none !important;
-  overflow: visible !important;
-}
+  /* FORCE override the desktop chat grid */
+  .chat {
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-rows: none !important; /* disable grid */
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important; /* allow internal scroll to handle it */
+  }
 
-/* Fix the inner messages area */
-.chat .messages {
-  flex: 1 1 auto !important;
-  min-height: 60vh !important;
-  max-height: none !important;
-  overflow-y: scroll !important;
-  -webkit-overflow-scrolling: touch !important;
-}
-
+  /* Scrollable chat messages */
+  .chat .messages {
+    flex: 1 1 auto !important;
+    min-height: 60vh !important;
+    max-height: none !important;
+    overflow-y: scroll !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
 
   /* Teaching panel second */
   aside.panel { order: 2; }
 
-  /* Destiny third */
+  /* Destiny panel third */
   #mainGrid > .panel:last-child { order: 3; }
 
-  /* Tighter spacing */
+  /* Tighter spacing for mobile */
   .hero,
   .toolbar,
   .suggest,
