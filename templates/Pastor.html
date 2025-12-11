@@ -119,18 +119,18 @@
     max-width: 100% !important;
   }
 
-  /* Chat first and very tall on mobile */
+  /* Chat first on mobile, but let height be automatic */
   section.chat {
     order: 1;
-    height: calc(100vh - 60px);        /* much taller */
-    max-height: calc(100vh - 60px);    /* prevents shrinking */
-    overflow: hidden;                  /* messages scroll inside */
+    height: auto !important;
+    max-height: none !important;
   }
 
-  /* Let the messages area take the remaining height */
+  /* 🔑 Make the messages area BIG and scrollable */
   .chat .messages {
-    flex: 1 !important;
-    overflow-y: auto !important;
+    min-height: 60vh;           /* takes ~60% of the screen */
+    max-height: none;
+    overflow-y: auto;
   }
 
   /* Teaching panel second */
@@ -151,6 +151,26 @@
     padding-right: 12px !important;
   }
 
+  /* Slightly tighten padding to free more space for messages */
+  .hero {
+    padding: 12px 14px;
+  }
+
+  .toolbar,
+  .suggest,
+  .inputbar {
+    padding: 8px 10px;
+  }
+
+  .pill {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+
+  /* Hide the "Shift+Enter = new line" text on small screens */
+  .toolbar .small {
+    display: none;
+  }
 }
 
 
