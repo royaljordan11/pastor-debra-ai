@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from typing import List, Dict, Any, Tuple, Optional
 from pathlib import Path
 from datetime import datetime, timezone
-
+import traceback
 import numpy as np
 import requests
 import zipfile
