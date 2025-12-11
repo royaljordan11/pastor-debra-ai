@@ -8177,6 +8177,9 @@ def get_videos():
 # Right-side button, DEF menu, “my theme is…”, theme numbers, theme titles → All handled here.
 # ─────────────────────────────────────────────────────────────────────────────
 
+
+
+
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
@@ -8244,7 +8247,6 @@ def chat():
         # 2) DESTINY THEME FAST-PATH
         # ────────────────────────────────────────────────────────────
         match = match_theme_from_text(user_text)
-
         name_theme = destiny_theme_for_name(full_name) if full_name else None
 
         if match:
@@ -8435,7 +8437,7 @@ def chat():
             pass
 
         # ────────────────────────────────────────────────────────────
-        # 11) RETRIEVAL & GPT GENERATION (CLEAN GPT-ONLY ROUTER)
+        # 11) RETRIEVAL & GPT GENERATION (GPT-ONLY)
         # ────────────────────────────────────────────────────────────
         try:
             hits_all = blended_search(user_text)
@@ -8445,20 +8447,11 @@ def chat():
             hits_ctx = []
             cites = []
 
-        comfort_mode = is_in_distress(user_text)
+        # PRE-LAUNCH: disable distress override
+        comfort_mode = False
 
-        # Scripture hint
-        topic = None
-        if SHAME_RX.search(user_text): topic = "shame_guilt"
-        elif FEAR_RX.search(user_text): topic = "fear_anxiety"
-        elif OVERWHELM_RX.search(user_text): topic = "overwhelm_burden"
-
+        # PRE-LAUNCH: no scripture memory; hint left as None
         scripture_hint = None
-        if topic:
-            chosen = pick_scripture(topic, session.get("last_scripture_ref"))
-            if chosen:
-                scripture_hint = chosen
-                session["last_scripture_ref"] = chosen["ref"]
 
         # Build small recent history
         recent_history = []
@@ -8472,10 +8465,6 @@ def chat():
                     })
         except Exception:
             pass
-
-        # ────────────────────────────────────────────────────────────
-        # ⭐⭐ GPT-ONLY MODEL ROUTER — ONNX/T5 COMPLETELY DISABLED ⭐⭐
-        # ────────────────────────────────────────────────────────────
 
         out = gpt_answer(
             user_text,
@@ -8496,7 +8485,11 @@ def chat():
 
         return jsonify({"messages": [resp]}), 200
 
-    except Exception:
+    except Exception as e:
+        # LOG the actual error so we can see it in Railway
+        print("❌ ERROR in /chat:", e)
+        traceback.print_exc()
+
         safe = (
             "Let’s invite the Lord into this moment. Scripture: Matthew 11:28\n"
             "Prayer: Jesus, steady our hearts. Amen."
@@ -8508,6 +8501,7 @@ def chat():
                 "text": expand_scriptures_in_text(safe)
             }]
         }), 200
+
 
 
 # ────────── Ops ──────────
