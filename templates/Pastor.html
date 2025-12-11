@@ -100,68 +100,6 @@
   .footer{ text-align:center; color:#7a91a7; font-size:12px; padding:18px 10px }
   a,a:visited{ color:#a6e3ff; text-decoration:none }
 
-/* 📱 MOBILE LAYOUT: Make chat full width and stack columns */
-@media (max-width: 900px) {
-
-  /* Turn 3-column grid into a vertical layout */
-  #mainGrid {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 16px !important;
-  }
-
-  /* All main panels go full width */
-  aside.panel,
-  section.chat,
-  .panel {
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-
-  /* Chat first on mobile, but let height be automatic */
-  section.chat {
-    order: 1;
-    height: auto !important;
-    max-height: none !important;
-  }
-
-  /* 🔑 Make the messages area BIG and scrollable */
-  .chat .messages {
-    min-height: 60vh;           /* takes ~60% of the screen */
-    max-height: none;
-    overflow-y: auto;
-  }
-
-  /* Teaching panel second */
-  aside.panel {
-    order: 2;
-  }
-
-  /* Destiny panel last */
-  #mainGrid > .panel:last-child {
-    order: 3;
-  }
-
-  /* Optional mobile padding */
-  aside.panel,
-  section.chat,
-  #mainGrid > .panel:last-child {
-    padding-left: 12px !important;
-    padding-right: 12px !important;
-  }
-
-  /* Slightly tighten padding to free more space for messages */
-  .hero {
-    padding: 12px 14px;
-  }
-
-  .toolbar,
-  .suggest,
-  .inputbar {
-    padding: 8px 10px;
-  }
-
   .pill {
     padding: 6px 8px;
     font-size: 11px;
@@ -179,6 +117,7 @@
     padding: 8px 10px;
   }
 }
+
 
 
 
