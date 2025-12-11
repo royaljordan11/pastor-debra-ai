@@ -119,11 +119,18 @@
     max-width: 100% !important;
   }
 
-  /* Chat first and tall on mobile */
+  /* Chat first and very tall on mobile */
   section.chat {
     order: 1;
-    height: calc(100vh - 140px);      /* take most of the screen */
-    max-height: calc(100vh - 140px);  /* prevent shrinking */
+    height: calc(100vh - 60px);        /* much taller */
+    max-height: calc(100vh - 60px);    /* prevents shrinking */
+    overflow: hidden;                  /* messages scroll inside */
+  }
+
+  /* Let the messages area take the remaining height */
+  .chat .messages {
+    flex: 1 !important;
+    overflow-y: auto !important;
   }
 
   /* Teaching panel second */
@@ -144,11 +151,8 @@
     padding-right: 12px !important;
   }
 
-  /* Let messages fill the height */
-  .chat .messages {
-    max-height: none;
-  }
 }
+
 
 </style>
 </head>
