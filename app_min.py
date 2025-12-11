@@ -3358,6 +3358,37 @@ DESTINY_THEME_NAMES = {
     33: "Servant-Teacher",
 }
 
+def build_theme_counsel(theme_num: int, theme_title: str, theme_meaning: str) -> str:
+    """
+    Build a pastoral Destiny Theme counsel paragraph in Pastor Debra's voice,
+    WITHOUT the 'My name is Pastor Debra Jordan' line.
+    """
+
+    # Gentle intro without saying her name
+    intro = (
+        f"Because your Christ-centered destiny theme is **{theme_title}**, "
+        f"I want to speak directly into the grace God has placed on your life."
+    )
+
+    prophetic = (
+        f"**Prophetic Insight:** As a bearer of **{theme_title}**, "
+        f"your life carries a holy pattern of {theme_meaning}. "
+        f"Heaven often uses you to shift atmospheres, lift burdens, "
+        f"and reveal Christ in ways others don't always see."
+    )
+
+    spiritual = (
+        "**Spiritual Meaning:** This theme reveals how God wired you to reflect Christ uniquely. "
+        f"It expresses movements of {theme_meaning}, woven into your calling, personality, "
+        "and the assignments God trusts you with."
+    )
+
+    # Simple per-theme scripture map (you can tweak these)
+    theme_scriptures = {
+        22: {
+            "ref": "Isaiah
+
+
 DESTINY_THEME_MEANINGS = {
     1: "pioneering faith, leadership, and starting new works",
     2: "peacemaking, bridge-building, and partnership",
