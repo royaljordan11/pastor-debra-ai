@@ -436,12 +436,12 @@
 /* 📱 MOBILE LAYOUT — FULLY FIXED */
 @media (max-width: 900px) {
 
-  /* Turn 3 columns into vertical stack */
+  /* CRITICAL FIX — override .grid defaults */
   #mainGrid {
     display: flex !important;
     flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 16px !important;
+    height: auto !important;
+    width: 100% !important;
   }
 
   /* Panels full width */
