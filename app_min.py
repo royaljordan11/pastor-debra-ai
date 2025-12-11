@@ -8171,6 +8171,15 @@ def get_videos():
         items = [intro] + [v for v in items if v.get("url") not in ("mom.mp4", "mom.mov")]
     return jsonify({"videos": items})
 
+def match_theme_from_text(text: str):
+    """
+    PRE-LAUNCH STUB:
+    For now, we don't try to detect destiny theme from free text.
+    We return None so the chat falls back to name-based theme only.
+    """
+    return None
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # /chat  (FULL OPTION-A REPLACEMENT)
 # Unified Destiny Theme Engine → Always highest priority.
