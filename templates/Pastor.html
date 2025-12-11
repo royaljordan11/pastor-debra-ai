@@ -452,24 +452,25 @@
     max-width: 100% !important;
   }
 
-  /* CHAT container */
-  section.chat,
-  .chat {
-    order: 1;
-    display: flex !important;
-    flex-direction: column !important;
-    height: calc(100vh - 120px) !important;
-    max-height: calc(100vh - 120px) !important;
-    overflow: hidden !important;
-  }
+/* FORCE override the desktop grid */
+.chat {
+  display: flex !important;
+  flex-direction: column !important;
+  grid-template-rows: none !important;   /* disable grid */
+  height: auto !important;               /* let the container grow */
+  max-height: none !important;
+  overflow: visible !important;
+}
 
-  /* Scrollable messages */
-  .chat .messages {
-    flex: 1 1 auto !important;
-    overflow-y: scroll !important;
-    -webkit-overflow-scrolling: touch !important;
-    min-height: 0 !important;
-  }
+/* Fix the inner messages area */
+.chat .messages {
+  flex: 1 1 auto !important;
+  min-height: 60vh !important;
+  max-height: none !important;
+  overflow-y: scroll !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
 
   /* Teaching panel second */
   aside.panel { order: 2; }
