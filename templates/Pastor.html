@@ -253,72 +253,74 @@
     border-radius:12px;
     padding:12px;
   }
+/* ---------- MOBILE VERSION (Accordion + Fixes) ---------- */
+@media (max-width: 900px) {
 
-  /* ---------- MOBILE VERSION (Accordion + Fixes) ---------- */
+  /* Convert desktop grid → stacked layout */
+  #mainGrid,
+  .grid {
+    display:flex !important;
+    flex-direction:column !important;
+    width:100% !important;
+    gap:16px !important;
+  }
 
-  @media (max-width: 900px) {
+  section.chat,
+  aside.panel {
+    width:100% !important;
+    max-width:100% !important;
+  }
 
-    #mainGrid,
-    .grid {
-      display:flex !important;
-      flex-direction:column !important;
-      width:100% !important;
-      gap:16px !important;
-    }
+  /* Chat becomes vertical */
+  section.chat,
+  .chat {
+    display:flex !important;
+    flex-direction:column !important;
+    height:auto !important;
+    overflow:hidden !important;
+  }
 
-    section.chat,
-    aside.panel {
-      width:100% !important;
-      max-width:100% !important;
-    }
+  /* Scrollable message area */
+  .chat .messages {
+    flex:1 1 auto !important;
+    overflow-y:auto !important;
+    -webkit-overflow-scrolling:touch;
+    min-height:55vh !important;
+  }
 
-    section.chat,
-    .chat {
-      display:flex !important;
-      flex-direction:column !important;
-      height:auto !important;
-      overflow:hidden !important;
-    }
+  /* ALWAYS hide the side panels unless opened via accordion */
+  aside.panel {
+    display:none;
+  }
 
-    /* Scrollable messages */
-    .chat .messages {
-      flex:1 1 auto !important;
-      overflow-y:auto !important;
-      -webkit-overflow-scrolling:touch;
-      min-height:55vh !important;
-    }
+  /* Accordion Buttons */
+  .accordion-toggle {
+    width:100%;
+    padding:14px 16px;
+    font-size:16px;
+    font-weight:600;
+    background:#141a22;
+    border:1px solid rgba(125,211,252,0.25);
+    border-radius:12px;
+    color:var(--text);
+    cursor:pointer;
+    text-align:left;
+  }
 
-aside.panel {
-  display:none; /* must NOT be !important */
+  /* When .accordion-open is ACTIVE, reveal the next panel */
+  .accordion-open + aside.panel {
+    display:block !important;
+    margin-top:10px;
+  }
+
+  /* Order on mobile */
+  section.chat { order:1; }
+  #teachingsAccordion { order:2; }
+  #teachingsPanel { order:3; }
+  #destinyAccordion { order:4; }
+  #destinyPanel { order:5; }
 }
 
-
-    /* Accordion buttons */
-    .accordion-toggle {
-      width:100%;
-      padding:14px 16px;
-      font-size:16px;
-      font-weight:600;
-      background:#141a22;
-      border:1px solid rgba(125,211,252,0.25);
-      border-radius:12px;
-      color:var(--text);
-      cursor:pointer;
-      text-align:left;
-    }
-
-    .accordion-open + aside.panel {
-      display:block !important;
-      margin-top:10px;
-    }
-
-    section.chat { order:1; }
-    #teachingsAccordion { order:2; }
-    #teachingsPanel { order:3; }
-    #destinyAccordion { order:4; }
-    #destinyPanel { order:5; }
-
-  }
 </style>
 </head>
 
@@ -482,10 +484,6 @@ aside.panel {
 
 </main>
 
-
-
-<!-- DESTINY accordion (mobile only) -->
-<button id="destinyAccordion" class="accordion-toggle">✨ Destiny Theme</button>
 
 
 <!-- FOOTER -->
