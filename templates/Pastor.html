@@ -367,19 +367,13 @@ aside.panel {
   </div>
 </header>
 
-
-<!-- --------------------------------------------- -->
-<!--  MOBILE ACCORDION BUTTONS (Visible on phones) -->
-<!-- --------------------------------------------- -->
-<button id="teachingsAccordion" class="accordion-toggle">📺 Clips & Teachings</button>
-
-
-<!-- --------------------------------------------- -->
-<!--  MAIN GRID LAYOUT                            -->
-<!-- --------------------------------------------- -->
 <main class="grid" id="mainGrid" style="opacity:0; transition:opacity .3s ease">
 
-  <!-- LEFT PANEL (Teachings) -->
+  <!-- 📱 MOBILE ACCORDIONS (MUST BE FIRST INSIDE <main>) -->
+  <button id="teachingsAccordion" class="accordion-toggle">📺 Clips & Teachings</button>
+  <button id="destinyAccordion" class="accordion-toggle">✨ Destiny Theme</button>
+
+  <!-- LEFT PANEL — Teachings -->
   <aside class="panel" id="teachingsPanel">
     <h3>Clips & Teachings</h3>
 
@@ -400,8 +394,9 @@ aside.panel {
   </aside>
 
 
-  <!-- CENTER: CHAT -->
+  <!-- CENTER: CHAT PANEL -->
   <section class="chat" role="region" aria-label="Chat with Pastor Debra AI">
+
     <div class="hero">
       <h2>“Speak, Lord — Your servant is listening.”</h2>
       <p>I’m Pastor Debra Jordan. Bring your heart — I’ll pray with you, open Scripture, and offer Christ-centered counsel.</p>
@@ -427,7 +422,7 @@ aside.panel {
     <!-- Messages -->
     <div class="messages" id="messages" aria-live="polite"></div>
 
-    <!-- Input -->
+    <!-- Chat Input -->
     <div class="inputbar">
       <textarea id="textbox" class="textbox" placeholder="Type a message…"></textarea>
       <button id="sendBtn" class="sendbtn">Send</button>
@@ -435,7 +430,7 @@ aside.panel {
   </section>
 
 
-  <!-- RIGHT PANEL (Destiny Theme) -->
+  <!-- RIGHT PANEL — Destiny Theme -->
   <aside class="panel" id="destinyPanel">
     <h3>Christ-Centered Destiny Theme</h3>
 
@@ -486,6 +481,7 @@ aside.panel {
   </aside>
 
 </main>
+
 
 
 <!-- DESTINY accordion (mobile only) -->
