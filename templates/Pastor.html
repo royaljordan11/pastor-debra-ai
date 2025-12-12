@@ -187,24 +187,7 @@
     gap:16px;
     padding:16px;
     max-width:1600px;
-    margin:0 auto;
-  }
-
-  @media (max-width:1300px){
-    .grid{grid-template-columns: 260px 1fr 360px}
-  }
-
-  @media (max-width:1100px){
-    .grid{grid-template-columns: 1fr}
-  }
-
-  .panel{
-    background: linear-gradient(180deg, var(--panel), var(--panel-2));
-    border:1px solid rgba(125,211,252,.18);
-    border-radius:var(--radius);
-    box-shadow:var(--shadow);
-  }
-  .panel h3{
+    margin:0 auto; 
     margin:0;
     padding:14px 16px;
     border-bottom:1px solid rgba(125,211,252,.12);
@@ -433,64 +416,74 @@
   }
   a,a:visited{ color:#a6e3ff; text-decoration:none }
 
-  /* Override desktop grid */
-  #mainGrid{
-    display:flex !important;
-    flex-direction:column !important;
-    gap:16px !important;
+/* 📱 MOBILE LAYOUT — FINAL WORKING VERSION */
+@media (max-width: 900px) {
+
+  /* Override desktop 3-column layout */
+  .grid {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 16px !important;
   }
 
   /* Panels full width */
   aside.panel,
   section.chat,
-  .panel{
-    width:100% !important;
-    max-width:100% !important;
+  .panel {
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
-  /* Reset chat desktop grid */
-  .chat{
-    display:flex !important;
-    flex-direction:column !important;
-    grid-template-rows:unset !important;
-    height:auto !important;
-    max-height:none !important;
-    overflow:visible !important;
+  /* ----- CHAT FIX: Disable desktop grid completely ----- */
+  .chat {
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-rows: unset !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: hidden !important;
   }
 
-  /* Scrollable messages */
-  .chat .messages{
-    flex:1 1 auto !important;
-    min-height:65vh !important;
-    overflow-y:auto !important;
-    -webkit-overflow-scrolling:touch !important;
+  /* ----- ENABLE FULL SCROLL + 15–30 LINES ----- */
+  .chat .messages {
+    flex: 1 1 auto !important;
+    min-height: 70vh !important;          /* 🔥 More visible lines */
+    max-height: none !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: 20px !important;
   }
 
-  .inputbar{flex-shrink:0 !important;}
+  /* Input stays pinned below chat */
+  .inputbar {
+    flex-shrink: 0 !important;
+  }
 
-  /* Proper stacking */
-  aside.panel{order:2 !important;}
-  #mainGrid > .panel:last-child{order:3 !important;}
+  /* Order stacking */
+  aside.panel { order: 2 !important; }
+  .grid > .panel:last-child { order: 3 !important; }
 
-  /* Tighter spacing */
+  /* Tighter paddings for more visible lines */
   .hero,
   .toolbar,
   .suggest,
-  .inputbar{
-    padding:8px 10px !important;
+  .inputbar {
+    padding: 8px 10px !important;
   }
 
-  .bubble{
-    font-size:13px !important;
-    line-height:1.3 !important;
-    padding:8px 10px !important;
+  /* Smaller bubble text = more lines fit */
+  .bubble {
+    font-size: 13px !important;
+    line-height: 1.3 !important;
+    padding: 8px 10px !important;
   }
 
-  .toolbar .small{
-    display:none !important;
+  /* Hide desktop hint */
+  .toolbar .small {
+    display: none !important;
   }
 }
-
 
 
 </style>
