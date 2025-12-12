@@ -416,10 +416,11 @@
   }
   a,a:visited{ color:#a6e3ff; text-decoration:none }
 
-/* 📱 MOBILE LAYOUT — PERFECT WORKING VERSION */
+/* 📱 MOBILE LAYOUT — FINAL FULLY COMPATIBLE VERSION */
 @media (max-width: 900px) {
 
-  /* FIX #1 — Make the main layout stack vertically */
+  /* 1️⃣ — Break desktop grid for phones */
+  #mainGrid,
   .grid {
     display: flex !important;
     flex-direction: column !important;
@@ -427,47 +428,47 @@
     gap: 16px !important;
   }
 
-  /* FIX #2 — Panels & chat go full width */
-  .panel,
+  /* 2️⃣ — Panels and chat become full width */
   aside.panel,
+  .panel,
   section.chat {
     width: 100% !important;
     max-width: 100% !important;
   }
 
-  /* FIX #3 — Disable desktop grid inside chat */
+  /* 3️⃣ — Completely disable desktop chat grid */
   section.chat,
   .chat {
     display: flex !important;
     flex-direction: column !important;
     height: auto !important;
     max-height: none !important;
-    grid-template-rows: unset !important;
     overflow: hidden !important;
+    grid-template-rows: unset !important;
   }
 
-  /* FIX #4 — Enable scrolling inside messages */
+  /* 4️⃣ — Real scrolling inside messages (Safari-proof) */
   .chat .messages {
     flex: 1 1 auto !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    min-height: 70vh !important;   /* 👍 Gives 15–30 lines */
+    min-height: 70vh !important;   /* Shows 15–30 lines */
     max-height: none !important;
-    padding-bottom: 22px !important;
+    overflow-y: scroll !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: 20px !important;
   }
 
-  /* FIX #5 — Input stays anchored */
+  /* 5️⃣ — Input stays pinned to bottom */
   .inputbar {
     flex-shrink: 0 !important;
     padding: 8px 10px !important;
   }
 
-  /* FIX #6 — Stack order: Chat → Teaching → Destiny */
+  /* 6️⃣ — Correct stacking order */
   section.chat { order: 1 !important; }
-  aside.panel { order: 2 !important; }
-  .grid > .panel:last-child { order: 3 !important; }
+  aside.panel:first-of-type { order: 2 !important; }
+  aside.panel:last-of-type { order: 3 !important; }
 
-  /* FIX #7 — Tighter UI = more visible text */
+  /* 7️⃣ — Condensed spacing for more visible lines */
   .hero,
   .toolbar,
   .suggest {
@@ -484,6 +485,7 @@
     display: none !important;
   }
 }
+
 
 
 </style>
