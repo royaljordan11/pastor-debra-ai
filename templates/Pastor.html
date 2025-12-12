@@ -433,10 +433,10 @@
   }
   a,a:visited{ color:#a6e3ff; text-decoration:none }
 
-/* 📱 MOBILE LAYOUT — FULLY FIXED (FINAL PATCH) */
+/* 📱 MOBILE LAYOUT — FULLY FIXED (FINAL WORKING VERSION) */
 @media (max-width: 900px) {
 
-  /* CRITICAL: Override desktop grid for Safari */
+  /* Override desktop grid for Safari */
   #mainGrid {
     display: flex !important;
     flex-direction: column !important;
@@ -452,32 +452,37 @@
     max-width: 100% !important;
   }
 
-  /* FORCE override the desktop chat grid */
+  /* CHAT overrides — disable desktop grid completely */
   .chat {
     display: flex !important;
     flex-direction: column !important;
-    grid-template-rows: none !important; /* disable grid */
-    height: auto !important;
+    grid-template-rows: unset !important;
+    height: auto !important;          /* allow natural height */
     max-height: none !important;
-    overflow: visible !important; /* allow internal scroll to handle it */
+    overflow: hidden !important;      /* scrolling happens INSIDE messages */
   }
 
-  /* Scrollable chat messages */
+  /* Scrollable messages — this is where the lines appear */
   .chat .messages {
     flex: 1 1 auto !important;
-    min-height: 60vh !important;
+    min-height: 65vh !important;      /* ~15+ lines on most phones */
     max-height: none !important;
-    overflow-y: scroll !important;
+    overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
   }
 
+  /* Chat input pinned under messages */
+  .inputbar {
+    flex-shrink: 0 !important;
+  }
+
   /* Teaching panel second */
-  aside.panel { order: 2; }
+  aside.panel { order: 2 !important; }
 
   /* Destiny panel third */
-  #mainGrid > .panel:last-child { order: 3; }
+  #mainGrid > .panel:last-child { order: 3 !important; }
 
-  /* Tighter spacing for mobile */
+  /* Tighter spacing */
   .hero,
   .toolbar,
   .suggest,
@@ -485,15 +490,18 @@
     padding: 8px 10px !important;
   }
 
+  /* More visible chat lines */
   .bubble {
     font-size: 13px !important;
     line-height: 1.3 !important;
     padding: 8px 10px !important;
   }
 
-  .toolbar .small { display: none !important; }
+  /* Hide desktop-only hint */
+  .toolbar .small { 
+    display: none !important; 
+  }
 }
-
 
 
 
