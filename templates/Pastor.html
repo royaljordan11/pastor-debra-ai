@@ -416,70 +416,70 @@
   }
   a,a:visited{ color:#a6e3ff; text-decoration:none }
 
-/* 📱 MOBILE LAYOUT — FINAL WORKING VERSION */
+/* 📱 MOBILE LAYOUT — PERFECT WORKING VERSION */
 @media (max-width: 900px) {
 
-  /* Override desktop 3-column layout */
+  /* FIX #1 — Make the main layout stack vertically */
   .grid {
     display: flex !important;
     flex-direction: column !important;
-    align-items: stretch !important;
+    width: 100% !important;
     gap: 16px !important;
   }
 
-  /* Panels full width */
+  /* FIX #2 — Panels & chat go full width */
+  .panel,
   aside.panel,
-  section.chat,
-  .panel {
+  section.chat {
     width: 100% !important;
     max-width: 100% !important;
   }
 
-  /* ----- CHAT FIX: Disable desktop grid completely ----- */
+  /* FIX #3 — Disable desktop grid inside chat */
+  section.chat,
   .chat {
     display: flex !important;
     flex-direction: column !important;
-    grid-template-rows: unset !important;
     height: auto !important;
     max-height: none !important;
+    grid-template-rows: unset !important;
     overflow: hidden !important;
   }
 
-  /* ----- ENABLE FULL SCROLL + 15–30 LINES ----- */
+  /* FIX #4 — Enable scrolling inside messages */
   .chat .messages {
     flex: 1 1 auto !important;
-    min-height: 70vh !important;          /* 🔥 More visible lines */
-    max-height: none !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
-    padding-bottom: 20px !important;
+    min-height: 70vh !important;   /* 👍 Gives 15–30 lines */
+    max-height: none !important;
+    padding-bottom: 22px !important;
   }
 
-  /* Input stays pinned below chat */
+  /* FIX #5 — Input stays anchored */
   .inputbar {
     flex-shrink: 0 !important;
+    padding: 8px 10px !important;
   }
 
-  /* Order stacking */
+  /* FIX #6 — Stack order: Chat → Teaching → Destiny */
+  section.chat { order: 1 !important; }
   aside.panel { order: 2 !important; }
   .grid > .panel:last-child { order: 3 !important; }
 
-  /* Tighter paddings for more visible lines */
+  /* FIX #7 — Tighter UI = more visible text */
   .hero,
   .toolbar,
-  .suggest,
-  .inputbar {
+  .suggest {
     padding: 8px 10px !important;
   }
 
-  /* Smaller bubble text = more lines fit */
   .bubble {
     font-size: 13px !important;
-    line-height: 1.3 !important;
+    line-height: 1.32 !important;
     padding: 8px 10px !important;
   }
 
-  /* Hide desktop hint */
   .toolbar .small {
     display: none !important;
   }
