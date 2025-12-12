@@ -288,10 +288,10 @@
       min-height:55vh !important;
     }
 
-    /* Hide both side panels */
-    aside.panel {
-      display:none !important;
-    }
+aside.panel {
+  display:none; /* must NOT be !important */
+}
+
 
     /* Accordion buttons */
     .accordion-toggle {
