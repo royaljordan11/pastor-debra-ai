@@ -6,6 +6,7 @@
 <title>Pastor Debra AI — Counsel & Christ-Centered Destiny Theme</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
 <style>
   :root{
     --bg:#0b0f14;
@@ -30,6 +31,7 @@
     font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,Helvetica,sans-serif;
   }
 
+  /* ---------- HEADER ---------- */
   .app-header{
     position:sticky;
     top:0;
@@ -42,7 +44,6 @@
     border-bottom:1px solid rgba(125,211,252,.15);
     backdrop-filter: blur(8px);
   }
-
   .brand{
     display:flex;
     align-items:center;
@@ -51,7 +52,6 @@
     letter-spacing:.2px;
     font-size:18px;
   }
-
   .brand .logo{
     width:38px;
     height:38px;
@@ -59,14 +59,12 @@
     background: radial-gradient(120px 100px at 20% 25%,#7dd3fc 0,#60a5fa 35%,#3b82f6 70%,#1d4ed8 100%);
     box-shadow:0 8px 24px rgba(99,102,241,.35), inset 0 0 48px rgba(255,255,255,.12);
   }
-
   .header-actions{
     margin-left:auto;
     display:flex;
     gap:10px;
     align-items:center;
   }
-
   .btn{
     appearance:none;
     border:none;
@@ -78,13 +76,11 @@
     background:linear-gradient(180deg,#7dd3fc,#60a5fa);
     box-shadow:var(--shadow);
   }
-
   .btn.secondary{
     background:#19202a;
     color:var(--text);
     border:1px solid rgba(125,211,252,.22);
   }
-
   .select,
   .check{
     background:#19202a;
@@ -95,24 +91,7 @@
     font-weight:600;
   }
 
-  /* Toast */
-  .toast{
-    position:fixed;
-    right:16px;
-    bottom:16px;
-    background:#0f151d;
-    color:var(--text);
-    border:1px solid rgba(125,211,252,.25);
-    padding:10px 12px;
-    border-radius:10px;
-    box-shadow:var(--shadow);
-    opacity:0;
-    transform:translateY(8px);
-    transition:.25s;
-  }
-  .toast.show{opacity:1; transform:translateY(0)}
-
-  /* Intro overlay */
+  /* ---------- INTRO OVERLAY ---------- */
   .intro-wrap{
     position:fixed;
     inset:0;
@@ -135,7 +114,6 @@
     width:100%;
     height:auto;
     display:block;
-    background:#000;
   }
   .intro-topbar{
     position:absolute;
@@ -143,10 +121,8 @@
     display:flex;
     justify-content:space-between;
     align-items:center;
-    gap:10px;
     padding:10px 12px;
     background:linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,.45));
-    z-index:3;
   }
   .skip-btn{
     appearance:none;
@@ -165,40 +141,24 @@
     padding:6px 10px;
     border-radius:999px;
     font-size:12px;
-    color:#d9e7f5;
     background:rgba(0,0,0,.45);
     border:1px solid rgba(125,211,252,.25);
-    z-index:3;
-  }
-  .intro-catch{
-    position:absolute;
-    inset:0;
-    z-index:2;
-    border:0;
-    background:transparent;
-    cursor:pointer;
-    padding:0;
   }
 
-  /* Layout */
+  /* ---------- LAYOUT GRID (DESKTOP) ---------- */
   .grid{
     display:grid;
     grid-template-columns: 320px 1fr 380px;
     gap:16px;
-    padding:16px;
-    max-width:1600px;
-    margin:0 auto; 
-    margin:0;
     padding:14px 16px;
-    border-bottom:1px solid rgba(125,211,252,.12);
-    font-size:14px;
-    letter-spacing:.3px;
-    color:var(--muted);
+    max-width:1600px;
+    margin:0 auto;
   }
+
+  /* ---------- VIDEO SIDEBAR ---------- */
   .videos{
     padding:12px;
     display:grid;
-    grid-template-columns:1fr;
     gap:12px;
     max-height: calc(100vh - 220px);
     overflow:auto;
@@ -212,95 +172,44 @@
     background:var(--card);
     border:1px solid rgba(125,211,252,.08);
     cursor:pointer;
-    transition: transform .12s ease, border-color .12s ease, background .12s ease;
+    transition: .12s ease;
   }
-  .vid-card:hover{
-    transform:translateY(-2px);
-    border-color:rgba(125,211,252,.25);
-    background:#16202a;
-  }
-  .thumb{
-    width:100%;
-    aspect-ratio:16/9;
-    border-radius:10px;
-    background:#0b1220;
-    display:grid;
-    place-items:center;
-    color:#8ab7d8;
-    font-size:12px;
-  }
-  .vid-title{ font-weight:600; line-height:1.2 }
-  .vid-meta{ color:var(--muted); font-size:12px; margin-top:6px }
 
-  /* Player */
-  .player-wrap{padding:0; overflow:hidden}
   .player-video,
   .player-iframe{
     aspect-ratio:16/9;
     width:100%;
-    border:none;
     border-radius:12px;
     background:#000;
-    box-shadow:var(--shadow);
+    border:none;
   }
-  .player-iframe{display:none}
 
-  /* Chat */
+  /* ---------- CHAT PANEL ---------- */
   .chat{
     display:grid;
     grid-template-rows: auto auto 1fr auto;
     height: calc(100vh - 150px);
-    background: linear-gradient(180deg, #0f151d, #0e141b 60%, #0c1218);
+    background: linear-gradient(180deg,#0f151d,#0e141b 60%,#0c1218);
     border:1px solid rgba(125,211,252,.18);
     border-radius:var(--radius);
-    box-shadow:var(--shadow);
     overflow:hidden;
   }
   .hero{
-    position:relative;
     padding:18px;
     border-bottom:1px solid rgba(125,211,252,.12);
-    background:
-      radial-gradient(600px 180px at 20% -30%, rgba(96,165,250,.18) 0, rgba(96,165,250,0) 60%),
-      radial-gradient(600px 180px at 80% -30%, rgba(125,211,252,.18) 0, rgba(125,211,252,0) 60%);
   }
-  .hero h2{
-    margin:.2rem 0 .6rem 0;
-    font-size:22px;
-  }
-  .hero p{
-    margin:0;
-    color:var(--muted);
-    font-size:14px;
-  }
-
   .toolbar{
     display:flex;
     gap:10px;
-    align-items:center;
     padding:10px 14px;
     border-bottom:1px solid rgba(125,211,252,.08);
-    background: rgba(20,26,34,.6);
   }
-  .toolbar .spacer{flex:1}
-
   .suggest{
     display:flex;
     flex-wrap:wrap;
     gap:8px;
     padding:10px 14px;
     border-bottom:1px solid rgba(125,211,252,.08);
-    background: rgba(20,26,34,.6);
-  }
-
-  .pill{
-    padding:8px 10px;
-    border:1px solid rgba(125,211,252,.2);
-    border-radius:999px;
-    color:var(--muted);
-    font-size:12px;
-    cursor:pointer;
-    background:#131a22;
   }
 
   .messages{
@@ -312,51 +221,30 @@
   }
 
   .bubble{
-    max-width: 82%;
+    max-width:82%;
     padding:12px 14px;
     border-radius:16px;
     line-height:1.45;
-    white-space:normal; /* paragraphs via <br>, not pre-wrap */
     border:1px solid rgba(125,211,252,.15);
-    box-shadow: 0 2px 16px rgba(0,0,0,.25);
-    position:relative;
   }
+
   .bubble.user{
     background:#1b2430;
     align-self:flex-end;
-    border-top-right-radius:6px;
   }
   .bubble.bot{
     background:#121a23;
     align-self:flex-start;
-    border-top-left-radius:6px;
-  }
-  .cites{
-    margin-top:8px;
-    display:flex;
-    gap:6px;
-    flex-wrap:wrap;
-  }
-  .cite{
-    font-size:11px;
-    color:var(--muted);
-    border:1px solid rgba(125,211,252,.15);
-    border-radius:8px;
-    padding:4px 6px;
-    background:rgba(20,26,34,.6);
   }
 
   .inputbar{
     display:grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns:1fr auto;
     gap:10px;
     padding:10px;
     border-top:1px solid rgba(125,211,252,.12);
-    background: linear-gradient(180deg, #0f151d, #0f151d);
   }
   .textbox{
-    width:100%;
-    resize:none;
     min-height:48px;
     max-height:160px;
     color:var(--text);
@@ -364,105 +252,83 @@
     border:1px solid rgba(125,211,252,.25);
     border-radius:12px;
     padding:12px;
-    outline:none;
-  }
-  .sendbtn{
-    padding:12px 16px;
-    border-radius:12px;
-    border:1px solid rgba(125,211,252,.25);
-    background:linear-gradient(180deg,#7dd3fc,#60a5fa);
-    color:#081018;
-    font-weight:800;
-    box-shadow:var(--shadow);
-    cursor:pointer;
-  }
-  .sendbtn[disabled]{ opacity:.6; cursor:not-allowed }
-
-  .stack{ display:flex; flex-direction:column; gap:14px; padding:14px }
-  .card{
-    background:var(--card);
-    border-radius:14px;
-    border:1px solid rgba(125,211,252,.18);
-    padding:14px;
-    box-shadow:var(--shadow);
-  }
-  .field{ display:grid; gap:6px; margin-bottom:10px }
-  .input{
-    background:#0f141a;
-    color:#fff;
-    border:1px solid rgba(125,211,252,.22);
-    border-radius:10px;
-    padding:10px 12px;
-    outline:none;
-  }
-  .small{ font-size:12px; color:var(--muted) }
-  .title{ font-weight:700; margin-bottom:8px }
-  .badge{
-    display:inline-block;
-    padding:4px 8px;
-    font-size:12px;
-    color:#081018;
-    background:linear-gradient(180deg,#7dd3fc,#60a5fa);
-    border-radius:999px;
-    font-weight:700;
-  }
-  .muted{ color:var(--muted) }
-  .hr{ height:1px; background:rgba(125,211,252,.12); border:none; margin:10px 0 }
-  .footer{
-    text-align:center;
-    color:#7a91a7;
-    font-size:12px;
-    padding:18px 10px;
-  }
-  a,a:visited{ color:#a6e3ff; text-decoration:none }
-
-/* 📱 MOBILE LAYOUT — FINAL FULLY COMPATIBLE VERSION */
-@media (max-width: 900px) {
-
-  /* 1️⃣ — Break desktop grid for phones */
-  #mainGrid,
-  .grid {
-    display: flex !important;
-    flex-direction: column !important;
-    width: 100% !important;
-    gap: 16px !important;
   }
 
-  /* 2️⃣ — Panels and chat become full width */
-  aside.panel,
-  .panel,
-  section.chat {
-    width: 100% !important;
-    max-width: 100% !important;
+  /* ---------- MOBILE VERSION (Accordion + Fixes) ---------- */
+
+  @media (max-width: 900px) {
+
+    #mainGrid,
+    .grid {
+      display:flex !important;
+      flex-direction:column !important;
+      width:100% !important;
+      gap:16px !important;
+    }
+
+    section.chat,
+    aside.panel {
+      width:100% !important;
+      max-width:100% !important;
+    }
+
+    section.chat,
+    .chat {
+      display:flex !important;
+      flex-direction:column !important;
+      height:auto !important;
+      overflow:hidden !important;
+    }
+
+    /* Scrollable messages */
+    .chat .messages {
+      flex:1 1 auto !important;
+      overflow-y:auto !important;
+      -webkit-overflow-scrolling:touch;
+      min-height:55vh !important;
+    }
+
+    /* Hide both side panels */
+    aside.panel {
+      display:none !important;
+    }
+
+    /* Accordion buttons */
+    .accordion-toggle {
+      width:100%;
+      padding:14px 16px;
+      font-size:16px;
+      font-weight:600;
+      background:#141a22;
+      border:1px solid rgba(125,211,252,0.25);
+      border-radius:12px;
+      color:var(--text);
+      cursor:pointer;
+      text-align:left;
+    }
+
+    .accordion-open + aside.panel {
+      display:block !important;
+      margin-top:10px;
+    }
+
+    section.chat { order:1; }
+    #teachingsAccordion { order:2; }
+    #teachingsPanel { order:3; }
+    #destinyAccordion { order:4; }
+    #destinyPanel { order:5; }
+
   }
-
-  /* 3️⃣ — Completely disable desktop chat grid */
-  section.chat,
-  .chat {
-    display: flex !important;
-    flex-direction: column !important;
-    height: auto !important;
-    max-height: none !important;
-    overflow: hidden !important;
-    grid-template-rows: unset !important;
-  }
-
-The quantum mirror of god
-Romans 12 21 
-44 dollar seed
-54  minutes prophet live 
-
-
 </style>
 </head>
+
 <body>
 
-<!-- INTRO OVERLAY (YouTube Only) -->
-<div id="intro" class="intro-wrap" aria-label="Intro video">
+<!-- INTRO OVERLAY -->
+<div id="intro" class="intro-wrap">
   <div class="intro-inner">
     <span class="caption">Welcome • Pastor Debra Jordan</span>
 
-    <!-- YouTube Intro Video -->
     <iframe 
       id="introIframe"
       class="intro-video"
@@ -473,63 +339,83 @@ Romans 12 21
 
     <div class="intro-topbar">
       <span></span>
-      <button id="skipIntro" class="skip-btn" type="button">Skip Intro</button>
+      <button id="skipIntro" class="skip-btn">Skip Intro</button>
     </div>
 
-    <button id="introCatch" class="intro-catch" title="Enter"></button>
+    <button id="introCatch" class="intro-catch"></button>
   </div>
 </div>
 
-
 <header class="app-header">
   <div class="brand">
-    <div class="logo" aria-hidden="true"></div>
-    <div>Pastor Debra <span style="opacity:.7; font-weight:600">AI</span></div>
+    <div class="logo"></div>
+    <div>Pastor Debra <span style="opacity:.7;font-weight:600">AI</span></div>
   </div>
+
   <div class="header-actions">
-    <select id="modelSelect" class="select" title="Choose model">
+    <select id="modelSelect" class="select">
       <option value="auto" selected>Model: Auto</option>
       <option value="t5">Model: T5 (local)</option>
       <option value="gpt">Model: GPT</option>
     </select>
-    <label class="check" style="display:flex;align-items:center;gap:8px">
+
+    <label class="check">
       <input type="checkbox" id="noCacheChk" /> no-cache
     </label>
-    <button class="btn secondary" id="reloadBtn" title="Hot reload teachings on the server">Reload</button>
+
+    <button class="btn secondary" id="reloadBtn">Reload</button>
   </div>
 </header>
 
+
+<!-- --------------------------------------------- -->
+<!--  MOBILE ACCORDION BUTTONS (Visible on phones) -->
+<!-- --------------------------------------------- -->
+<button id="teachingsAccordion" class="accordion-toggle">📺 Clips & Teachings</button>
+
+
+<!-- --------------------------------------------- -->
+<!--  MAIN GRID LAYOUT                            -->
+<!-- --------------------------------------------- -->
 <main class="grid" id="mainGrid" style="opacity:0; transition:opacity .3s ease">
-  <!-- LEFT SIDEBAR -->
-  <aside class="panel">
+
+  <!-- LEFT PANEL (Teachings) -->
+  <aside class="panel" id="teachingsPanel">
     <h3>Clips & Teachings</h3>
+
     <div style="padding:12px">
       <div class="card player-wrap">
-        <video id="playerVideo" class="player-video" controls playsinline preload="metadata" controlsList="nodownload"></video>
-        <iframe id="playerIframe" class="player-iframe"
-          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture"
-          allowfullscreen></iframe>
+        <video id="playerVideo" class="player-video" controls playsinline preload="metadata"></video>
+
+        <iframe 
+          id="playerIframe"
+          class="player-iframe"
+          allow="autoplay; encrypted-media; clipboard-write; picture-in-picture"
+          allowfullscreen>
+        </iframe>
       </div>
     </div>
+
     <div class="videos" id="videosList"></div>
   </aside>
 
-  <!-- MIDDLE: CHAT -->
+
+  <!-- CENTER: CHAT -->
   <section class="chat" role="region" aria-label="Chat with Pastor Debra AI">
     <div class="hero">
       <h2>“Speak, Lord — Your servant is listening.”</h2>
-      <p>I’m Pastor Debra Jordan. Bring me your questions — I’ll pray with you, open Scripture, and offer Christ-centered counsel.</p>
+      <p>I’m Pastor Debra Jordan. Bring your heart — I’ll pray with you, open Scripture, and offer Christ-centered counsel.</p>
     </div>
 
     <!-- Toolbar -->
     <div class="toolbar">
-      <div class="pill" data-text="Scripture: Psalm 46:10\nPastor Debra, please help me be still before God today.">Be Still (Ps 46:10)</div>
+      <div class="pill" data-text="Scripture: Psalm 46:10\nPastor Debra, help me be still before God today.">Be Still (Ps 46:10)</div>
       <div class="pill" id="propheticQuick">Prophetic Word</div>
       <div class="spacer"></div>
-      <div class="small muted">Shift+Enter = new line</div>
+      <div class="small muted">Shift+Enter for new line</div>
     </div>
 
-    <!-- Suggest row -->
+    <!-- Suggest Row -->
     <div class="suggest" id="quickRow">
       <div class="pill" data-text="Pastor Debra, I feel anxious. Please pray with me and share one Scripture and one step I can take today.">Prayer for Anxiety</div>
       <div class="pill" data-text="Pastor Debra, give me biblical counsel for my marriage — what’s one step I can take today?">Marriage Counsel</div>
@@ -538,48 +424,56 @@ Romans 12 21
       <div class="pill" id="useNameDob">Use my Name & DOB</div>
     </div>
 
+    <!-- Messages -->
     <div class="messages" id="messages" aria-live="polite"></div>
 
+    <!-- Input -->
     <div class="inputbar">
-      <textarea id="textbox" class="textbox" placeholder="Type a message… (Shift+Enter for new line)" aria-label="Message to Pastor Debra AI"></textarea>
+      <textarea id="textbox" class="textbox" placeholder="Type a message…"></textarea>
       <button id="sendBtn" class="sendbtn">Send</button>
     </div>
   </section>
 
-  <!-- RIGHT: DESTINY -->
-  <aside class="panel" role="region" aria-label="Destiny Theme Panel">
+
+  <!-- RIGHT PANEL (Destiny Theme) -->
+  <aside class="panel" id="destinyPanel">
     <h3>Christ-Centered Destiny Theme</h3>
+
     <div class="stack">
       <div class="card">
         <div class="title">Your Details</div>
+
         <div class="field">
-          <label class="small" for="nameInput">Full Name</label>
+          <label class="small">Full Name</label>
           <input id="nameInput" class="input" placeholder="e.g., Deborah Jordan" autocomplete="name">
         </div>
+
         <div class="field">
-          <label class="small" for="dobInput">Date of Birth <span class="muted">(optional)</span></label>
+          <label class="small">Date of Birth <span class="muted">(optional)</span></label>
           <input id="dobInput" class="input" placeholder="YYYY-MM-DD" inputmode="numeric" autocomplete="bday">
         </div>
-        <div id="calcNotice" class="small muted" aria-live="polite"></div>
+
+        <div id="calcNotice" class="small muted"></div>
         <div class="hr"></div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap">
-          <button id="calcBtn" class="btn">Reveal your Christian Theme</button>
-        </div>
+
+        <button id="calcBtn" class="btn">Reveal your Christian Theme</button>
       </div>
 
       <div id="resultCard" class="card" style="display:none">
-        <div style="display:flex; justify-content:space-between; align-items:center">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
           <div class="title">Theme Result</div>
           <span id="themeBadge" class="badge">Your Theme</span>
         </div>
-        <div id="themeOrigin" class="muted small"></div>
+
+        <div id="themeOrigin" class="small muted"></div>
+
         <div class="hr"></div>
-        <div id="themeAnswer" style="white-space:pre-wrap; line-height:1.45"></div>
+        <div id="themeAnswer" style="white-space:pre-wrap"></div>
+
         <div class="hr"></div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap">
-          <button id="askAboutThemeBtn" class="btn">Ask Pastor Debra about this</button>
-          <button id="copyThemeBtn" class="btn" style="background:#0f141a;color:var(--text);border:1px solid rgba(125,211,252,.22)">Copy Guidance</button>
-        </div>
+
+        <button id="askAboutThemeBtn" class="btn">Ask Pastor Debra about this</button>
+        <button id="copyThemeBtn" class="btn" style="background:#0f141a;color:var(--text);border:1px solid rgba(125,211,252,.22)">Copy Guidance</button>
       </div>
 
       <div class="card">
@@ -590,603 +484,353 @@ Romans 12 21
       </div>
     </div>
   </aside>
+
 </main>
 
+
+<!-- DESTINY accordion (mobile only) -->
+<button id="destinyAccordion" class="accordion-toggle">✨ Destiny Theme</button>
+
+
+<!-- FOOTER -->
 <div class="footer">
   © <span id="year"></span> Pastor Debra AI • “He who began a good work in you will carry it to completion.”
 </div>
 
-<div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
+
+
+<!-- --------------------------------------------- -->
+<!--  JAVASCRIPT SECTION                           -->
+<!-- --------------------------------------------- -->
 <script>
-const API_BASE = (location.protocol.startsWith('http') ? '' : 'http://localhost:8000');
-
-/* ---------- INTRO: reveal on ANY interaction ---------- */
-const introEl    = document.getElementById('intro');
-const mainGrid   = document.getElementById('mainGrid');
-const skipIntro  = document.getElementById('skipIntro');
+/* ============================================================
+   INTRO LOGIC
+============================================================ */
+const introEl = document.getElementById('intro');
+const introIframe = document.getElementById('introIframe');
+const skipIntro = document.getElementById('skipIntro');
 const introCatch = document.getElementById('introCatch');
-const introIframe = document.getElementById('introIframe');  // YouTube iframe
+const mainGrid = document.getElementById('mainGrid');
 
-function revealApp(){
+function revealApp() {
   if (!introEl || introEl.classList.contains('intro-hidden')) return;
 
-  // No more introVideo.pause() — YouTube iframe cannot be paused this way
-  try { 
-    introIframe.src = "";  // stop YouTube playback safely
-  } catch(e){}
-
+  introIframe.src = "";  
   introEl.classList.add('intro-hidden');
   mainGrid.style.opacity = 1;
-  unlockOff();
 
-  setTimeout(()=>{ 
-    try{ introEl.remove(); } catch(e){} 
-  }, 320);
+  setTimeout(() => introEl.remove(), 300);
 }
 
-function unlockOn(){
-  const opts = {capture:true, passive:true};
+['click','touchstart','pointerdown','keydown','wheel'].forEach(evt => {
+  window.addEventListener(evt, revealApp, { passive:true });
+});
 
-  window.addEventListener('click',       revealApp, opts);
-  window.addEventListener('pointerdown', revealApp, opts);
-  window.addEventListener('touchstart',  revealApp, opts);
-  window.addEventListener('keydown',     revealApp, opts);
-  window.addEventListener('wheel',       revealApp, opts);
+skipIntro.addEventListener("click", revealApp);
+introCatch.addEventListener("click", revealApp);
 
-  introCatch.addEventListener('click', revealApp);
-  introEl.addEventListener('click', revealApp);
 
-  // ❌ Removed: introVideo.addEventListener(...)
+/* ============================================================
+   ACCORDION LOGIC (MOBILE)
+============================================================ */
+function setupAccordion() {
+  const tBtn = document.getElementById("teachingsAccordion");
+  const dBtn = document.getElementById("destinyAccordion");
+  const tPanel = document.getElementById("teachingsPanel");
+  const dPanel = document.getElementById("destinyPanel");
+
+  if (tBtn) {
+    tBtn.addEventListener("click", () => {
+      tBtn.classList.toggle("accordion-open");
+      tPanel.style.display = tBtn.classList.contains("accordion-open") ? "block" : "none";
+    });
+  }
+
+  if (dBtn) {
+    dBtn.addEventListener("click", () => {
+      dBtn.classList.toggle("accordion-open");
+      dPanel.style.display = dBtn.classList.contains("accordion-open") ? "block" : "none";
+    });
+  }
 }
 
-function unlockOff(){
-  const opts = {capture:true};
-  window.removeEventListener('click',       revealApp, opts);
-  window.removeEventListener('pointerdown', revealApp, opts);
-  window.removeEventListener('touchstart',  revealApp, opts);
-  window.removeEventListener('keydown',     revealApp, opts);
-  window.removeEventListener('wheel',       revealApp, opts);
+setupAccordion();
+
+
+/* ============================================================
+   UTILITIES
+============================================================ */
+function qs(s){ return document.querySelector(s); }
+function qsa(s){ return [...document.querySelectorAll(s)]; }
+
+function toast(msg){
+  const t = qs('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
 }
 
-document.getElementById("skipIntro").addEventListener("click", revealApp);
-document.getElementById("introCatch").addEventListener("click", revealApp);
 
-// No "ended" listener — YouTube does not support it
-
-unlockOn(); // KEEP THIS EXACTLY HERE
-
-/* ---------- Utils ---------- */
-const qs = s=>document.querySelector(s);
-const qsa = s=>Array.from(document.querySelectorAll(s));
-function apiURL(path){ return `${API_BASE}${path}`; }
-async function fetchJSON(path,options={}){
-  const res=await fetch(apiURL(path),{headers:{'Content-Type':'application/json'},...options});
-  if(!res.ok){ const txt=await res.text(); throw new Error(`${res.status} ${res.statusText}: ${txt}`); }
-  return await res.json();
-}
-function toast(msg){ const t=qs('#toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2400); }
-
-/* ---------- Videos (sidebar) ---------- */
+/* ============================================================
+   VIDEO RENDERING
+============================================================ */
 function ytIdFromUrl(url){
-  if(!url) return null;
-  try{
-    const u=new URL(url);
-    if(u.hostname.includes('youtu.be')) return u.pathname.slice(1);
-    if(u.hostname.includes('youtube.com')) return u.searchParams.get('v');
-  }catch(e){}
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes('youtu.be')) return u.pathname.slice(1);
+    if (u.hostname.includes('youtube.com')) return u.searchParams.get('v');
+  } catch(e){}
   return null;
 }
+
 function showLocalVideo(src){
-  const v = qs('#playerVideo'); const f = qs('#playerIframe');
-  try{ v.pause(); }catch(e){}
-  v.innerHTML='';
-  const type = src.endsWith('.mp4') ? 'video/mp4' : src.endsWith('.mov') ? 'video/quicktime' : '';
-  const s = document.createElement('source'); s.src = src; if(type) s.type=type; v.appendChild(s);
-  v.style.display='block'; f.style.display='none'; f.src='';
-  v.load(); v.play().catch(()=>{});
+  const v = qs('#playerVideo');
+  const f = qs('#playerIframe');
+  try { v.pause(); } catch(e){}
+  v.innerHTML = "";
+
+  const s = document.createElement('source');
+  s.src = src;
+  v.appendChild(s);
+
+  v.style.display = "block";
+  f.style.display = "none";
+  f.src = "";
+
+  v.load();
+  v.play().catch(()=>{});
 }
+
 function showYouTube(id){
-  const v=qs('#playerVideo'); const f=qs('#playerIframe');
-  try{ v.pause(); }catch(e){}
-  v.style.display='none'; v.innerHTML='';
-  f.style.display='block'; f.src=`https://www.youtube.com/embed/${id}?rel=0&modestbranding=1&color=white`;
+  const v = qs('#playerVideo');
+  const f = qs('#playerIframe');
+  try { v.pause(); } catch(e){}
+  v.innerHTML = "";
+  v.style.display = "none";
+
+  f.style.display = "block";
+  f.src = `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1`;
 }
-function renderVideos(list){
-  const wrap=qs('#videosList'); wrap.innerHTML='';
-  list.forEach(v=>{
-    const id=v.yt_id||ytIdFromUrl(v.url||'')||'';
-    const thumb=v.thumbnail||(id?`https://i.ytimg.com/vi/${id}/hqdefault.jpg`: '');
-    const el=document.createElement('div'); el.className='vid-card';
-    el.innerHTML = `<div class="thumb">${thumb?`<img src="${thumb}" style="width:100%;height:100%;object-fit:cover;border-radius:10px" />`:'No preview'}</div>
-      <div><div class="vid-title">${(v.title||'Untitled Clip')}</div><div class="vid-meta">${(v.duration||v.category||'')+''}</div></div>`;
-    el.addEventListener('click',()=>{
-      if(id){ showYouTube(id); }
-      else if(v.url && (v.url.endsWith('.mp4')||v.url.endsWith('.mov'))){ showLocalVideo(v.url); }
-      else { toast('No playable source for this item.'); }
+
+async function loadVideos(){
+  let data = {};
+  try {
+    data = await fetch('/videos').then(r=>r.json());
+  } catch(e){}
+  
+  let list = data.videos || [];
+
+  const extraLocal = [
+    { title:"Thankful People Are Thinking People", url:"momone.mp4", duration:"Teaching" },
+    { title:"Wisdom and Prayer", url:"momtwo.mp4", duration:"Teaching" },
+    { title:"The Power of Small Blessings", url:"momthree.mp4", duration:"Teaching" }
+  ];
+
+  if (list.length) {
+    const first = list[0];
+    first.title = "Pastor Debra Jordan Intro";
+    list = [first, ...extraLocal, ...list.slice(1)];
+  } else {
+    list = extraLocal;
+  }
+
+  const wrap = qs('#videosList');
+  wrap.innerHTML = "";
+
+  list.forEach(v => {
+    const id = v.yt_id || ytIdFromUrl(v.url);
+    const thumb = id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : "";
+
+    const el = document.createElement('div');
+    el.className = "vid-card";
+    el.innerHTML = `
+      <div class="thumb">
+        ${thumb ? `<img src="${thumb}" style="width:100%;height:100%;object-fit:cover;border-radius:10px" />` : "No Preview"}
+      </div>
+      <div>
+        <div class="vid-title">${v.title}</div>
+        <div class="vid-meta">${v.duration || ""}</div>
+      </div>
+    `;
+
+    el.addEventListener("click", () => {
+      if (id) showYouTube(id);
+      else if (v.url.endsWith(".mp4") || v.url.endsWith(".mov")) showLocalVideo(v.url);
+      else toast("No playable source.");
     });
+
     wrap.appendChild(el);
   });
-}
-async function loadVideos(){
-  try{
-    const data = await fetchJSON('/videos');
-    let list = (data && data.videos) || [];
 
-    // 1) First item (your mom.mp4 intro from /videos)
-    if (list.length) {
-      list[0].title = "Pastor Debra Jordan Intro.";
-    }
-
-    // 2–4) Local clips right under the intro, with your exact titles
-    const extraLocal = [
-      {
-        title: "Thankful People Are Thinking People",
-        url: "momone.mp4",
-        duration: "Teaching"
-      },
-      {
-        title: "Wisdom and Prayer",
-        url: "momtwo.mp4",
-        duration: "Teaching"
-      },
-      {
-        title: "The Power of Small Blessings",
-        url: "momthree.mp4",
-        duration: "Teaching"
-      }
-    ];
-
-    if (list.length) {
-      const [first, ...rest] = list;
-      list = [first, ...extraLocal, ...rest];
-    } else {
-      // if /videos ever returns nothing, still show your 3 locals
-      list = extraLocal;
-    }
-
-    renderVideos(list);
-
-    // Auto-play the very first item (the intro)
-    if (list.length){
-      const first = list[0];
-      const id = first.yt_id || ytIdFromUrl(first.url || '');
-      if (id) {
-        showYouTube(id);
-      } else if (first.url && (first.url.endsWith('.mp4') || first.url.endsWith('.mov'))){
-        showLocalVideo(first.url);
-      }
-    }
-  }catch(e){
-    // optional: console.error(e);
-  }
+  // Auto-play first
+  const first = list[0];
+  const id = first.yt_id || ytIdFromUrl(first.url);
+  if (id) showYouTube(id);
+  else if (first.url) showLocalVideo(first.url);
 }
 
-/* ---------- Chat + Cites ---------- */
-const messages=[]; let sending=false; let typingEl=null;
 
-function addMessage(role, text, cites){
+/* ============================================================
+   CHAT SYSTEM
+============================================================ */
+let sending = false;
+const messages = [];
+
+function addMessage(role, text) {
   const box = document.createElement('div');
-  box.className = `bubble ${role === 'user' ? 'user' : 'bot'}`;
-
-  const raw = text || '';
-
-  // Escape HTML so nothing can inject markup
-  const escaped = raw
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-
-  // Convert newlines to <br> / <br><br> for paragraph layout
-  const withBreaks = escaped
-    .replace(/\r\n/g, '\n')
-    .replace(/\n{2,}/g, '<br><br>')
-    .replace(/\n/g, '<br>');
-
-  box.innerHTML = withBreaks;
+  box.className = `bubble ${role}`;
+  box.innerHTML = text.replace(/\n/g,'<br>');
   qs('#messages').appendChild(box);
+  qs('#messages').scrollTop = qs('#messages').scrollHeight;
+}
 
-  if (role !== 'user' && Array.isArray(cites) && cites.length){
-    const citeWrap=document.createElement('div'); 
-    citeWrap.className='cites';
-    cites.slice(0,4).forEach(c=>{
-      const sp=document.createElement('span');
-      sp.className='cite';
-      sp.title=(c.section?`${c.source} • ${c.section}`:c.source);
-      sp.textContent = c.section ? `${c.source} · ${c.section}` : c.source;
-      citeWrap.appendChild(sp);
+async function sendChat(text){
+  if (!text.trim() || sending) return;
+
+  addMessage("user", text);
+  messages.push({ role:"user", text });
+
+  sending = true;
+
+  addMessage("bot", "Typing…");
+
+  let payload = { messages };
+
+  try {
+    const res = await fetch('/chat', {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify(payload)
+    }).then(r=>r.json());
+
+    const reply = res.messages?.[0]?.text || "(no response)";
+    document.querySelectorAll(".bot").forEach(b=>{
+      if (b.textContent === "Typing…") b.remove();
     });
-    box.appendChild(citeWrap);
+    addMessage("bot", reply);
+
+  } catch(e){
+    addMessage("bot", "Something went wrong.");
   }
 
-  const m=qs('#messages'); 
-  m.scrollTop=m.scrollHeight;
+  sending = false;
 }
 
-function showTyping(){
-  if(typingEl) return;
-  typingEl=document.createElement('div');
-  typingEl.className='bubble bot';
-  typingEl.textContent='Typing…';
-  qs('#messages').appendChild(typingEl);
-  qs('#messages').scrollTop=qs('#messages').scrollHeight;
-}
-function hideTyping(){
-  if(typingEl){ typingEl.remove(); typingEl=null; }
-}
+qs('#sendBtn').addEventListener('click', () => {
+  const t = qs('#textbox');
+  const val = t.value;
+  t.value = "";
+  sendChat(val);
+});
 
-function payloadExtras(){
-  const modelSel = qs('#modelSelect'); 
-  const mode = (modelSel?.value || 'auto').toLowerCase();
-  const noCache = !!qs('#noCacheChk')?.checked;
-  const out = {};
-  if(mode==='t5' || mode==='gpt') out.active_model = mode;
-  if(noCache) out.no_cache = true;
-  const name = (qs('#nameInput')?.value || '').trim();
-  const dob  = (qs('#dobInput')?.value || '').trim();
-  if(name) out.name = name;
-  if(dob)  out.birthdate = dob;
-  return out;
-}
-
-async function sendChat(userText){
-  if(!userText || sending) return;
-  addMessage('user', userText);
-  messages.push({role:'user', text:userText});
-  showTyping(); sending=true; qs('#sendBtn').setAttribute('disabled','true');
-  try{
-    const extra = payloadExtras();
-    const data=await fetchJSON('/chat',{method:'POST', body:JSON.stringify({messages, ...extra})});
-    hideTyping();
-    const msg=(data && data.messages && data.messages[0])||{text:'(no response)'};
-    addMessage('assistant', msg.text||'', msg.cites||[]);
-    messages.push({role:'assistant', text: msg.text||''});
-  }catch(e){
-    hideTyping();
-    addMessage('assistant',"I’m sorry, I ran into an issue. Let’s try again.\n\nDetails: "+(e?.message||'network error'));
-  }finally{
-    sending=false; qs('#sendBtn').removeAttribute('disabled');
+qs('#textbox').addEventListener('keydown', e => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    qs('#sendBtn').click();
   }
-}
+});
 
-/* ---------- Destiny helpers (NO numerology visible) ---------- */
 
-// Master numbers (internal only)
+/* ============================================================
+   DESTINY THEME LOGIC
+============================================================ */
 const MASTER_SET=new Set([11,22,33]);
 
-// Letter value table (Pythagorean-style) – internal math only
-const LETTER_VALUES=(()=>{
-  const vals=[];
-  for(let i=0;i<26;i++) vals.push((i%9)+1);
-  const map={};
-  'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach((ch,i)=>map[ch]=vals[i]);
-  return map;
+const LETTER_VALUES = (() => {
+  const m={};
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach((c,i)=>m[c]=(i%9)+1);
+  return m;
 })();
 
-// Theme display names (what users see)
-const THEME_NAME_MAP = {
-  1: "Pioneer Grace",
-  2: "Peacemaker",
-  3: "Psalmist",
-  4: "Builder",
-  5: "Holy Freedom",
-  6: "Keeper of Covenant",
-  7: "Mystic Scholar",
-  8: "Steward of Influence",
-  9: "Compassionate Finisher",
-  11: "Prophetic Beacon",
-  22: "Master Repairer",
-  33: "Servant-Teacher"
-};
-
-function themeNameForNumber(n){
-  return THEME_NAME_MAP[n] || "Destiny Theme";
-}
-
-// Local Destiny Theme meanings (already Christian, no number wording)
-const destinyMap = {
-  1: {
-    answer: "This theme carries a pioneer grace—the courage to begin what others only imagine. The Lord whispers, “Be strong and courageous… for the Lord your God is with you” (Joshua 1:9). Lead, but lead low. Start with prayer, write the vision, and take the first obedient step. Invite one wise voice to speak truth into your plans so zeal doesn’t outrun wisdom. Declare: I move first, but never alone—God goes before me."
-  },
-  2: {
-    answer: "This theme carries the anointing of the peacemaker—an ezer-kind of help that restores bridges. “Two are better than one… if either falls, one can help the other up” (Ecclesiastes 4:9–10). Keep the peace without losing yourself: set holy boundaries, tell the truth in love, and reconcile without enabling. Your listening is ministry. Declare: I honor God by honoring people; I help without disappearing."
-  },
-  3: {
-    answer: "This theme is the psalmist’s banner—joyful expression that lifts hearts toward God. “Sing to the Lord a new song” (Psalm 96:1). Create something small each day—song, sentence, testimony—and use your words to bless, not to bruise (Proverbs 18:21). Let celebration become intercession with melody. Declare: My voice is anointed; I release beauty that heals."
-  },
-  4: {
-    answer: "This theme is the builder’s mantle—order, foundations, rootedness. “He is like a tree planted by streams of water” (Psalm 1:3). Choose a simple rule of life: Scripture, prayer, rest, service. Finish what you start; let excellence be worship. God will trust you with more as you steward what you have. Declare: I build on the Rock; what I plant will flourish."
-  },
-  5: {
-    answer: "This theme carries holy flexibility—freedom that sets captives free. “It is for freedom that Christ has set us free” (Galatians 5:1). Channel your love of change into mission, not escape. Fast one pleasure weekly to anchor freedom in Christ, not novelty. Travel light and carry good news. Declare: I am free to obey; my change becomes someone else’s breakthrough."
-  },
-  6: {
-    answer: "This theme bears the keeper’s heart—nurture, responsibility, covenant care. “Above all these put on love, which binds everything together” (Colossians 3:14). Serve without a savior complex. Guard Sabbath so care flows from overflow, not exhaustion. Lead your household in prayer and practical mercy. Declare: Love is my language; I carry people to Jesus, not to myself."
-  },
-  7: {
-    answer: "This theme walks the path of the mystic scholar—wisdom sought in stillness. “If any of you lacks wisdom, let him ask God” (James 1:5). Keep a daily appointment with silence and Scripture; then bring your insight back to community so knowledge matures into love. Declare: God speaks in my stillness; I walk in revealed wisdom."
-  },
-  8: {
-    answer: "This theme is stewardship of influence—authority that serves justice and mercy. “It is He who gives you power to get wealth” (Deuteronomy 8:18). Treat resources like a trust, not a trophy: tithe, budget, bless. Be bold in negotiations and tender in generosity; champion the voiceless. Declare: I steward power righteously; increase serves the Kingdom."
-  },
-  9: {
-    answer: "This theme carries compassionate finishing—mercy that brings closure and healing. “If you pour yourself out for the hungry… your gloom will be as the noonday” (Isaiah 58:10). Say yes to assignments that mend the broken—and actually close the loops: forgive, follow up, finish. Keep boundaries so compassion can last. Declare: I finish with mercy; healing follows my steps."
-  },
-  11: {
-    answer: "This theme is the beacon—prophetic clarity that points to Jesus. “You are the light of the world… let your light shine” (Matthew 5:14–16). Keep your lamp trimmed: purity, prayer, accountability. Write what you see, test it by the Word, and speak truth in love—revelation unto redemption. Declare: I carry light without pride; illumination serves salvation."
-  },
-  22: {
-    answer: "This theme is the repairer—master builder for families, ministries, and cities. “You shall be called the repairer of the breach” (Isaiah 58:12). Think in blueprints: vision → phases → teams → timelines. Put prayer at the center and justice on the edges. Start small; scale holy. Declare: By God’s grace I rebuild; what was broken will live again."
-  },
-  33: {
-    answer: "This theme is the servant-teacher—Christlike compassion with mature mentorship. “Have this mind among yourselves… [Christ] emptied Himself” (Philippians 2:5–7). Teach from a towel, not a throne (John 13). Make disciples at the table; pair sound doctrine with gentle presence. Suffer well, forgive quickly. Declare: I lead by lowering; love is my authority."
-  }
-};
-
-// internal math helpers
 function reduceKeepMasters(n){
   while(n>9 && !MASTER_SET.has(n)){
-    n=n.toString().split('').map(d=>+d).reduce((a,b)=>a+b,0);
+    n = n.toString().split('').reduce((a,b)=>a+ +b,0);
   }
   return n;
 }
-function computeThemeFromName(name){
-  const letters=(name||'').toUpperCase().match(/[A-Z]/g);
-  if(!letters) return null;
-  const total=letters.reduce((sum,ch)=>sum+(LETTER_VALUES[ch]||0),0);
+
+function themeFromName(name){
+  const letters = name.toUpperCase().match(/[A-Z]/g);
+  if (!letters) return null;
+  const total = letters.reduce((a,ch)=>a+(LETTER_VALUES[ch]||0),0);
   return reduceKeepMasters(total);
 }
-function computeThemeFromDob(dob){
-  const digits=(dob||'').match(/\d/g);
-  if(!digits) return null;
-  const total=digits.map(d=>+d).reduce((a,b)=>a+b,0);
+
+function themeFromDob(dob){
+  const digits = dob.match(/\d/g);
+  if (!digits) return null;
+  const total = digits.reduce((a,b)=>a+ +b,0);
   return reduceKeepMasters(total);
 }
-function computeThemes(name,dob){
-  return {
-    themeName: computeThemeFromName(name) || null,
-    themeDob : computeThemeFromDob(dob)   || null
-  };
-}
 
-function getThemeEntry(n){
-  return destinyMap[n] || null;
-}
+const THEME_NAME = {
+  1:"Pioneer Grace",
+  2:"Peacemaker",
+  3:"Psalmist",
+  4:"Builder",
+  5:"Holy Freedom",
+  6:"Keeper of Covenant",
+  7:"Mystic Scholar",
+  8:"Steward of Influence",
+  9:"Compassionate Finisher",
+  11:"Prophetic Beacon",
+  22:"Master Repairer",
+  33:"Servant-Teacher"
+};
 
-function showThemeResult({ number, origin, entry }){
-  const card   = document.getElementById('resultCard');
-  const badge  = document.getElementById('themeBadge');
-  const originEl = document.getElementById('themeOrigin');
-  const answerEl = document.getElementById('themeAnswer');
+const destinyMap = {
+  1:{answer:"This theme carries a pioneer grace..."},
+  2:{answer:"This theme carries the anointing of the peacemaker..."},
+  3:{answer:"This theme is the psalmist’s banner..."},
+  4:{answer:"This theme is the builder’s mantle..."},
+  5:{answer:"This theme carries holy flexibility..."},
+  6:{answer:"This theme bears the keeper’s heart..."},
+  7:{answer:"This theme walks the path of the mystic scholar..."},
+  8:{answer:"This theme is stewardship of influence..."},
+  9:{answer:"This theme carries compassionate finishing..."},
+  11:{answer:"This theme is the beacon..."},
+  22:{answer:"This theme is the repairer..."},
+  33:{answer:"This theme is the servant-teacher..."}
+};
 
-  if(!number || !entry){
-    card.style.display='none';
+function handleCompute(){
+  const name = qs('#nameInput').value.trim();
+  const dob = qs('#dobInput').value.trim();
+  const notice = qs('#calcNotice');
+
+  const themeByDob = dob ? themeFromDob(dob) : null;
+  const themeByName = name ? themeFromName(name) : null;
+
+  const chosen = themeByDob || themeByName;
+
+  if (!chosen){
+    notice.textContent = "Enter a name or DOB to compute your theme.";
+    qs('#resultCard').style.display = "none";
     return;
   }
 
-  const label = themeNameForNumber(number);
-  badge.textContent = label;
+  const entry = destinyMap[chosen];
 
-  if(origin === 'dob'){
-    originEl.textContent = 'Derived from your date of birth';
-  } else if(origin === 'name'){
-    originEl.textContent = 'Derived from your name';
-  } else {
-    originEl.textContent = '';
-  }
-
-  answerEl.textContent = entry.answer || '';
-
-  // store numeric theme ONLY internally (not shown)
-  card.dataset.themeNumber = String(number);
-
-  card.style.display='block';
+  qs('#themeBadge').textContent = THEME_NAME[chosen] || "Destiny Theme";
+  qs('#themeOrigin').textContent = themeByDob ? "Derived from your date of birth" : "Derived from your name";
+  qs('#themeAnswer').textContent = entry.answer;
+  qs('#resultCard').style.display = "block";
 }
 
-async function handleCompute(){
-  const notice=document.getElementById('calcNotice');
-  notice.textContent='';
-
-  const name=document.getElementById('nameInput').value.trim();
-  const dob =document.getElementById('dobInput').value.trim();
-
-  const {themeName, themeDob}=computeThemes(name,dob);
-  const chosen = themeDob || themeName || null;
-  const origin = themeDob ? 'dob' : (themeName ? 'name' : '');
-
-  if(!chosen){
-    notice.textContent='Enter a name or DOB to compute your Destiny Theme.';
-    document.getElementById('resultCard').style.display='none';
-    return;
-  }
-
-  const entry = getThemeEntry(chosen);
-
-  if(!entry){
-    // Should not normally happen, but keep a graceful message
-    showThemeResult({
-      number: chosen,
-      origin,
-      entry: { answer: 'Theme computed. Guidance will appear here when available.' }
-    });
-    return;
-  }
-
-  showThemeResult({ number: chosen, origin, entry });
-}
-
-function insertDestinyToChat(){
-  const name=document.getElementById('nameInput').value.trim();
-  const dob =document.getElementById('dobInput').value.trim();
-  const card=document.getElementById('resultCard');
-
-  if(card.style.display==='none'){
-    toast('Compute your Destiny Theme first.');
-    return;
-  }
-
-  const themeNum = parseInt(card.dataset.themeNumber || '0', 10);
-  if(!themeNum){
-    toast('Theme not available yet. Please compute again.');
-    return;
-  }
-
-  const entry = getThemeEntry(themeNum);
-  const themeLabel = themeNameForNumber(themeNum);
-
-  const opener = name ? `My name is ${name}` : `Hi`;
-  const dobText = dob ? ` (DOB ${dob})` : '';
-
-  const userPrompt =
-    `${opener}${dobText}. My Christ-centered destiny theme is “${themeLabel}.” ` +
-    `Pastor Debra, would you give me personal counsel with one Scripture and one practical step?`;
-
-  // ⭐ NEW: force DEF mode
-  const payload = {
-    messages: [{ role: "user", text: userPrompt }],
-    name,
-    birthdate: dob,
-    def_chat: true    // <<< REQUIRED for destiny counsel
-  };
-
-  addMessage('user', userPrompt);
-  messages.push({ role: 'user', text: userPrompt });
-  
-  showTyping();
-  sending = true;
-  qs('#sendBtn').setAttribute('disabled','true');
-
-  fetchJSON('/chat', { method:'POST', body: JSON.stringify(payload) })
-    .then(data => {
-      hideTyping();
-      const msg = data.messages?.[0] || { text: '(no response)' };
-      addMessage('assistant', msg.text, msg.cites || []);
-      messages.push({ role:'assistant', text: msg.text });
-    })
-    .catch(e => {
-      hideTyping();
-      addMessage('assistant', "Error retrieving destiny counsel.\n" + e.message);
-    })
-    .finally(() => {
-      sending = false;
-      qs('#sendBtn').removeAttribute('disabled');
-    });
-}
+qs('#calcBtn').addEventListener('click', handleCompute);
 
 
-/* ---------- Local storage for profile ---------- */
-function saveProfile(){
-  localStorage.setItem('pd_name', (qs('#nameInput')?.value||'').trim());
-  localStorage.setItem('pd_dob',  (qs('#dobInput')?.value||'').trim());
-}
-function loadProfile(){
-  const n=localStorage.getItem('pd_name')||'';
-  const d=localStorage.getItem('pd_dob')||'';
-  if(qs('#nameInput')) qs('#nameInput').value=n;
-  if(qs('#dobInput'))  qs('#dobInput').value=d;
-}
-
-/* ---------- Bind + Start ---------- */
-function bindUI(){
-  qs('#sendBtn').addEventListener('click',()=>{
-    const t=qs('#textbox').value.trim();
-    if(!t) return;
-    qs('#textbox').value='';
-    sendChat(t);
-  });
-  qs('#textbox').addEventListener('keydown',(e)=>{
-    if(e.key==='Enter' && !e.shiftKey){
-      e.preventDefault();
-      qs('#sendBtn').click();
-    }
-  });
-
-  qs('#calcBtn').addEventListener('click', handleCompute);
-  qs('#copyThemeBtn').addEventListener('click', copyTheme);
-  qs('#askAboutThemeBtn').addEventListener('click', insertDestinyToChat);
-  qs('#reloadBtn').addEventListener('click', async()=>{
-    try{
-      await fetchJSON('/reload',{method:'POST'});
-      toast('Teachings reloaded');
-    }catch(e){
-      toast('Reload failed');
-    }
-  });
-
-  qs('#nameInput').addEventListener('change', saveProfile);
-  qs('#dobInput').addEventListener('change', saveProfile);
-
-  // Quick prompts
-  qsa('.pill').forEach(p=>{
-    p.addEventListener('click', ()=>{
-      if(p.id==='useNameDob'){
-        const name=qs('#nameInput').value.trim();
-        const dob =qs('#dobInput').value.trim();
-        const {themeName: nameThemeNum, themeDob: dobThemeNum}=computeThemes(name,dob);
-        const parts=[];
-        if(name) parts.push(`My name is ${name}`);
-        if(dob) parts.push(`DOB: ${dob}`);
-        if(dobThemeNum){
-          parts.push(`My birth theme is “${themeNameForNumber(dobThemeNum)}”`);
-        }
-        if(nameThemeNum){
-          parts.push(`My name theme is “${themeNameForNumber(nameThemeNum)}”`);
-        }
-        const joined=parts.join(' • ');
-        const hint="Pastor Debra, would you pray for me, share one Scripture, and give me one practical next step?";
-        const text = joined ? `${joined}. ${hint}` : `Pastor Debra, please pray for me, share one Scripture, and give me one practical next step.`;
-        sendChat(text);
-      } else {
-        sendChat(p.dataset.text);
-      }
-    });
-  });
-
-  // Prophetic quick action (toolbar pill)
-  const pq = qs('#propheticQuick');
-  if (pq) {
-    pq.addEventListener('click', ()=>{
-      sendChat('Please share a prophetic word for my season.');
-    });
-  }
-}
-
-function scrubVisibleDashes(root = document.body) {
-  const walker = document.createTreeWalker(
-    root,
-    NodeFilter.SHOW_TEXT,
-    {
-      acceptNode(node) {
-        if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
-        const p = node.parentNode && node.parentNode.nodeName.toLowerCase();
-        if (p === 'script' || p === 'style') return NodeFilter.FILTER_REJECT;
-        return NodeFilter.FILTER_ACCEPT;
-      }
-    }
-  );
-  const EM_EN_DASH_RX = /[\u2012\u2013\u2014\u2015\u2212]/g;
-  while (walker.nextNode()) {
-    const t = walker.currentNode;
-    t.nodeValue = t.nodeValue.replace(EM_EN_DASH_RX, (m, idx, str) => {
-      const prev = str[idx - 1] || ' ';
-      const next = str[idx + 1] || ' ';
-      const isWordBoundary = /\w/.test(prev) && /\w/.test(next);
-      return isWordBoundary ? ', ' : '. ';
-    });
-  }
-}
-
-function start(){
-  scrubVisibleDashes();
-  document.getElementById('year').textContent=new Date().getFullYear();
-  loadProfile();
-  bindUI();
-  loadVideos();
-  addMessage('assistant', "Welcome, beloved. I’m Pastor Debra Jordan. Share your heart, or enter your name (and optional DOB) on the right and I’ll reflect with you on your Destiny Theme.");
-}
-
-start();
+/* ============================================================
+   INITIALIZE
+============================================================ */
+document.getElementById("year").textContent = new Date().getFullYear();
+loadVideos();
+addMessage("bot", "Welcome, beloved. I’m Pastor Debra Jordan. Share your heart, or enter your name and optional DOB and I’ll reflect with you on your Destiny Theme.");
 </script>
 
 </body>
 </html>
+
