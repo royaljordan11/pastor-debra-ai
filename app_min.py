@@ -3814,27 +3814,6 @@ def answer_pastor_debra_faq(user_text: str) -> Optional[str]:
             "or **practical counsel for a specific situation**?"
         )
 
-    # 2B) PROPHETIC WORD — SEASON-BASED (no name)  ✅ ADD HERE
-    # ---------------------------------------------------------------------
-    if re.search(
-        r"\b(prophetic\s+word|word\s+from\s+the\s+lord|speak\s+to\s+my\s+season|for\s+my\s+season)\b",
-        t_fixed,
-        re.I,
-    ):
-        return say(
-            "Beloved, this is a season of **alignment and completion**, not confusion. "
-            "What once felt delayed was not denied — it was being stabilized.\n\n"
-            "The Lord is strengthening your discernment in this season. You are learning how to move "
-            "with wisdom instead of urgency, and obedience instead of pressure. "
-            "There is a quiet confidence forming in you that does not need validation to be effective.\n\n"
-            "I sense the Lord saying: *finish what you started*. This season rewards faithfulness, "
-            "patience, and consistency in small things. What God is building beneath the surface "
-            "will soon speak for itself.\n\n"
-            "Scripture (Ecclesiastes 3:11): “He has made everything beautiful in its time.”\n\n"
-            "Trust the pace God has set — it is leading you exactly where you need to be."
-        )
-
-
     # ---------------------------------------------------------------------
     # 3) PROPHETIC WORD FOR SOMEONE'S NAME ("prophetic word for my niece NAME")
     # ---------------------------------------------------------------------
@@ -3889,6 +3868,23 @@ def answer_pastor_debra_faq(user_text: str) -> Optional[str]:
             "Scripture (Philippians 1:6): “He who began a good work in you will complete it.”\n\n"
             f"If you’d like, I can pray even more specifically over the season {name_clean} is in."
         )
+
+
+    # 2B) PROPHETIC WORD — SEASON-BASED (no name)  ✅ ADD HERE
+    # ---------------------------------------------------------------------
+    if re.search(
+        r"\b(prophetic\s+word|word\s+from\s+the\s+lord|speak\s+to\s+my\s+season|for\s+my\s+season)\b",
+        t_fixed,
+        re.I,
+    ):
+        return get_prophetic_word(
+            topic=detect_prophecy_topic(t_raw),
+            theme_name=detect_destiny_theme(t_raw),
+            variability=True
+        )
+
+
+
 
     # -------------------------------
     # 1B) HARD OVERRIDE: Tarot / Astrology / Psychic
