@@ -7707,42 +7707,55 @@ def chat():
         # ────────────────────────────────────────────
         # 2) ASK PASTOR DEBRA — DESTINY THEME (PRIMARY)
         # ────────────────────────────────────────────
-        if "ask pastor debra about" in t_norm:
+
+        if t_norm.startswith("ask pastor debra"):
             theme_num = _maybe_theme_from_profile(full_name, birthdate)
 
-            if theme_num and theme_num in DESTINY_THEME_NAMES:
-                theme_name = DESTINY_THEME_NAMES[theme_num]
-
-                system_hint = (
-                    "You are Pastor Debra Jordan. "
-                    "Explain this Christ-centered Destiny Theme in depth. "
-                    "Include exactly ONE Scripture and ONE practical step."
-                )
-
-                prompt = (
-                    f"My Destiny Theme is '{theme_name}'. "
-                    "Please explain what this means for my current season."
-                )
-
-                out = gpt_answer(
-                    prompt,
-                    raw_hits=[],
-                    hits_ctx=[],
-                    no_cache=True,
-                    comfort_mode=False,
-                    scripture_hint=None,
-                    history=history,
-                    system_hint=system_hint
-                )
-
+            if not theme_num or theme_num not in DESTINY_THEME_NAMES:
                 return jsonify({
                     "messages": [{
                         "role": "assistant",
                         "model": "destiny",
-                        "text": expand_scriptures_in_text(out),
-                        "cites": []
+                        "text": (
+                            "Beloved, I need your full name or date of birth to reflect accurately "
+                            "on your Destiny Theme. Please enter it above, and ask me again."
+                        )
                     }]
                 }), 200
+
+            theme_name = DESTINY_THEME_NAMES[theme_num]
+
+            system_hint = (
+                "You are Pastor Debra Jordan. "
+                "Speak with pastoral authority, warmth, and clarity. "
+                "Explain this Christ-centered Destiny Theme in depth. "
+                "Include exactly ONE Scripture and ONE practical step."
+            )
+
+            prompt = (
+                f"My Destiny Theme is '{theme_name}'. "
+                "Please explain what this means for my current season."
+            )
+
+            out = gpt_answer(
+                prompt,
+                raw_hits=[],
+                hits_ctx=[],
+                no_cache=True,
+                comfort_mode=False,
+                scripture_hint=None,
+                history=history,
+                system_hint=system_hint
+            )
+
+            return jsonify({
+                "messages": [{
+                    "role": "assistant",
+                    "model": "destiny",
+                    "text": expand_scriptures_in_text(out),
+                    "cites": []
+                }]
+            }), 200
 
         # ────────────────────────────────────────────
         # 3) PROPHETIC WORD
