@@ -821,39 +821,39 @@ function addMessage(role, text) {
   const isMobile = window.innerWidth <= 900;
   const isBot = role === "bot";
 
-  qs('#messages').appendChild(box);
+  const messagesEl = qs('#messages');
+  messagesEl.appendChild(box);
 
   // MOBILE: collapse long bot messages
-  if (isMobile && isBot && box.scrollHeight > 260) {
-    box.classList.add("collapsed");
+  if (isMobile && isBot) {
+    requestAnimationFrame(() => {
+      if (box.scrollHeight > 260) {
+        box.classList.add("collapsed");
 
-    const btn = document.createElement("div");
-    btn.className = "read-more-btn";
-    btn.textContent = "Read more";
+        const btn = document.createElement("div");
+        btn.className = "read-more-btn";
+        btn.textContent = "Read more";
 
-    btn.addEventListener("click", () => {
-      box.classList.remove("collapsed");
-      btn.remove();
+        btn.addEventListener("click", () => {
+          box.classList.remove("collapsed");
+          btn.remove();
+        });
+
+        box.after(btn);
+      }
     });
-
-    box.after(btn);
   }
 
-  qs('#messages').scrollTop = qs('#messages').scrollHeight;
+  messagesEl.scrollTop = messagesEl.scrollHeight;
 }
+
 
 
 let hasSentFirstMessage = false;
 
-function hideMobileSuggestionsOnce() {
-  if (window.innerWidth > 900) return;
 
-  const suggest = document.getElementById("quickRow");
-  if (!suggest) return;
 
-  suggest.classList.add("mobile-hidden");
-}
-
+let hasSentFirstMessage = false;
 
 async function sendChat(text){
   if (!text.trim() || sending) return;
@@ -861,28 +861,34 @@ async function sendChat(text){
   addMessage("user", text);
   messages.push({ role:"user", text });
 
-if (!hasSentFirstMessage) {
-  hasSentFirstMessage = true;
-  hideMobileSuggestionsOnce();
-}
+  // 🔥 FIRST MESSAGE CLEANUP (REAL FIX)
+  if (!hasSentFirstMessage) {
+    hasSentFirstMessage = true;
 
-  const hero = document.querySelector('.hero');
-  if (hero) hero.remove();
+    // Remove hero
+    document.querySelector('.hero')?.remove();
 
-  requestAnimationFrame(() => {
-  qs('#messages').scrollTop = qs('#messages').scrollHeight;
-});
+    // Remove quick suggestions (Prayer for Anxiety, etc.)
+    document.getElementById("quickRow")?.remove();
+
+    // OPTIONAL: remove toolbar too for +1–2 lines
+    // document.querySelector('.toolbar')?.remove();
+
+    requestAnimationFrame(() => {
+      const m = qs('#messages');
+      m.scrollTop = m.scrollHeight;
+    });
+  }
 
   sending = true;
 
   addMessage("bot", "Typing…");
 
   let payload = {
-   messages,
-   name: qs('#nameInput')?.value || "",
-   dob: qs('#dobInput')?.value || ""
- };
-
+    messages,
+    name: qs('#nameInput')?.value || "",
+    dob: qs('#dobInput')?.value || ""
+  };
 
   try {
     const res = await fetch('/chat', {
@@ -892,9 +898,11 @@ if (!hasSentFirstMessage) {
     }).then(r=>r.json());
 
     const reply = res.messages?.[0]?.text || "(no response)";
-    document.querySelectorAll(".bot").forEach(b=>{
+
+    document.querySelectorAll(".bot").forEach(b => {
       if (b.textContent === "Typing…") b.remove();
     });
+
     addMessage("bot", reply);
 
   } catch(e){
@@ -903,6 +911,7 @@ if (!hasSentFirstMessage) {
 
   sending = false;
 }
+
 
 qs('#sendBtn').addEventListener('click', () => {
   const t = qs('#textbox');
