@@ -1652,6 +1652,68 @@ def handle_sop(user_text: str) -> str:
     # 3 — GENERAL MENTION
     return SOP_SHORT_VERSION
 
+def build_prophetic_word(
+    user_text: str,
+    full_name: str = "",
+    birthdate: str = "",
+):
+    """
+    GPT-first prophetic word generator.
+    Safe against generic phrases like 'my season'.
+    """
+
+    name = (full_name or "").strip()
+    name_norm = name.lower()
+
+    INVALID_NAME_PHRASES = {
+        "my season", "this season", "my life", "my calling",
+        "my daughter", "my son", "my marriage", "my week",
+        "my situation", "my purpose"
+    }
+
+    use_name = bool(name and name_norm not in INVALID_NAME_PHRASES)
+
+    destiny_line = ""
+    if use_name:
+        try:
+            theme = _maybe_theme_from_profile(name, birthdate)
+            if theme:
+                destiny_line = (
+                    f"The Lord has marked {name} with a **{theme['title']}** grace — "
+                    f"{theme['meaning']}."
+                )
+        except Exception:
+            destiny_line = ""
+
+    system_prompt = (
+        "You are Pastor Debra Jordan. "
+        "Speak with warmth, prophetic clarity, and Christ-centered authority. "
+        "Do NOT assume metaphorical phrases are names. "
+        "If no real name is given, speak directly to the person."
+    )
+
+    user_prompt = (
+        f"Request: {user_text}\n\n"
+        f"{destiny_line}\n\n"
+        "Give a fresh prophetic word (6–10 sentences max). "
+        "Include ONE Scripture naturally. "
+        "Do not repeat past phrasing. "
+        "Do not explain numerology. "
+        "End with gentle hope, not a question."
+    )
+
+    out = gpt_answer(
+        user_prompt,
+        hits_ctx=[],
+        no_cache=True,
+        comfort_mode=False,
+        scripture_hint=None,
+        history=[],
+        system_hint=system_prompt
+    )
+
+    return out
+
 
 
 def build_prophetic_seed(
@@ -8507,22 +8569,16 @@ def chat():
             if intent_now == "prophetic" and not PROPHECY_KEYWORDS.search(user_text or ""):
                 full_name = (data.get("name") or data.get("full_name") or "").strip()
                 birthdate = (data.get("birthdate") or data.get("dob") or "").strip()
-                theme_guess = _maybe_theme_from_profile(full_name, birthdate)
-
+                
                 out = build_prophetic_word(
+                    user_text=user_text,
                     full_name=full_name,
-                    birthdate=birthdate,
-                    theme=theme_guess,
+                    birthdate=birthdate
+                    
                 )
                 out = expand_scriptures_in_text(out)
 
-                # Optional cites for UI
-                try:
-                    hits_all = blended_search(user_text)
-                    hits_ctx = filter_hits_for_context(hits_all, "prophetic")
-                    cites = format_cites(hits_ctx)
-                except Exception:
-                    cites = []
+              
 
                 return jsonify({
                     "messages": [{
@@ -8532,6 +8588,7 @@ def chat():
                         "cites": cites,
                     }]
                 }), 200
+                
         except Exception as e:
             logger.exception("Prophetic fast-path failed: %s", e)
             # fall through to normal routing
