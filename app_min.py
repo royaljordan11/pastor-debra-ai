@@ -8392,7 +8392,7 @@ def chat():
                 "messages": [{
                     "role": "assistant",
                     "model": "sys",
-                    "text": "Welcome, beloved. How can I pray with you today?"
+                    "text": "Welcome. How can I pray with you today?"
                 }]
             }), 200
 
@@ -8415,49 +8415,48 @@ def chat():
         birthdate = (data.get("dob") or data.get("birthdate") or "").strip()
 
         # ────────────────────────────────────────────────────────────
-        # 3) SANITIZE ABSTRACT “NAMES”
+        # 3) BLOCK ABSTRACT “NAMES”
         # ────────────────────────────────────────────────────────────
-        ABSTRACT_NAME_RX = re.compile(
-            r"\b(my season|this season|my life|my calling|my purpose)\b",
-            re.I
-        )
-        if full_name and ABSTRACT_NAME_RX.search(full_name):
+        ABSTRACT_SUBJECTS = {
+            "my season", "this season", "my life",
+            "my calling", "my purpose", "my destiny"
+        }
+
+        if full_name and full_name.lower().strip() in ABSTRACT_SUBJECTS:
             full_name = ""
 
         # ────────────────────────────────────────────────────────────
-        # 4) SUBJECT EXTRACTION (CRITICAL FIX)
+        # 4) SUBJECT RESOLUTION (CRITICAL)
         # ────────────────────────────────────────────────────────────
-        subject = "you"
-
-        if re.search(r"\bdaughter\b", t_norm):
+        if re.search(r"\b(daughter)\b", t_norm):
             subject = "your daughter"
-        elif re.search(r"\bson\b", t_norm):
-            subject = "your son"
-        elif re.search(r"\bchild\b", t_norm):
+        elif re.search(r"\b(son|child)\b", t_norm):
             subject = "your child"
-        elif re.search(r"\bcousin\b", t_norm):
-            subject = "your cousin"
-        elif re.search(r"\bsister\b", t_norm):
-            subject = "your sister"
-        elif re.search(r"\bbrother\b", t_norm):
-            subject = "your brother"
+        elif re.search(r"\b(cousin|sister|brother|mother|father)\b", t_norm):
+            subject = "your loved one"
         elif full_name:
             subject = full_name
+        else:
+            subject = "you"
 
         # ────────────────────────────────────────────────────────────
-        # 5) FORCE PROPHETIC INTENT WHEN ASKED
+        # 5) INTENT DETECTION (WITH OVERRIDES)
         # ────────────────────────────────────────────────────────────
+        try:
+            intent_now = detect_intent(user_text)
+        except Exception:
+            intent_now = "general"
+
         PROPHETIC_RX = re.compile(
-            r"\b(prophetic word|prophecy|speak over|pray over|prayer for)\b",
+            r"\b(prophetic word|prophecy|prophesy|speak over|pray over|prayer for)\b",
             re.I
         )
 
-        intent_now = detect_intent(user_text)
         if PROPHETIC_RX.search(user_text):
             intent_now = "prophetic"
 
         # ────────────────────────────────────────────────────────────
-        # 6) FAST FAQ (HOUSE / DONATION / LOGISTICS)
+        # 6) FAQ FAST-PATH
         # ────────────────────────────────────────────────────────────
         try:
             faq_reply = answer_pastor_debra_faq(user_text)
@@ -8474,7 +8473,7 @@ def chat():
             pass
 
         # ────────────────────────────────────────────────────────────
-        # 7) ADVICE PATH (NON-PROPHETIC)
+        # 7) ADVICE PATH
         # ────────────────────────────────────────────────────────────
         if intent_now == "advice":
             try:
@@ -8496,23 +8495,20 @@ def chat():
                 pass
 
         # ────────────────────────────────────────────────────────────
-        # 8) GPT-LED PROPHETIC / PASTORAL RESPONSE (PRIMARY)
+        # 8) GPT-LED PROPHETIC / PASTORAL RESPONSE
         # ────────────────────────────────────────────────────────────
-        recent_history = []
-        for m in msgs[-6:]:
-            txt = (m.get("text") or "").strip()
-            if txt:
-                recent_history.append({
-                    "role": m.get("role", "user"),
-                    "content": txt
-                })
+        recent_history = [
+            {"role": m.get("role", "user"), "content": (m.get("text") or "").strip()}
+            for m in msgs[-6:] if (m.get("text") or "").strip()
+        ]
 
         system_hint = (
             f"The user is asking about {subject}. "
-            "Respond in a warm, pastoral, prophetic tone. "
-            "Do NOT repeat previous wording. "
-            "Be specific, relational, and forward-looking. "
-            "If a prophetic word is requested, deliver it directly."
+            "Deliver a prophetic or pastoral response when requested. "
+            "Do NOT treat abstract phrases as names. "
+            "Avoid repeating previous phrasing. "
+            "Do NOT default to generic comfort scripture unless distress is explicit. "
+            "Be specific, forward-looking, and relational."
         )
 
         out = gpt_answer(
@@ -8550,6 +8546,7 @@ def chat():
                 "text": expand_scriptures_in_text(safe)
             }]
         }), 200
+
 
 
 # ────────── Ops ──────────
