@@ -253,73 +253,171 @@
     border-radius:12px;
     padding:12px;
   }
-/* ---------- MOBILE VERSION (Accordion + Fixes) ---------- */
+/* ---------- MOBILE VERSION (High-Density, Desktop-Parity) ---------- */
 @media (max-width: 900px) {
 
-  /* Convert desktop grid → stacked layout */
+  /* ---------------------------------
+     GRID → STACK
+  ---------------------------------- */
   #mainGrid,
   .grid {
-    display:flex !important;
-    flex-direction:column !important;
-    width:100% !important;
-    gap:16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 12px !important;
   }
 
   section.chat,
   aside.panel {
-    width:100% !important;
-    max-width:100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
-  /* Chat becomes vertical */
+  /* ---------------------------------
+     CHAT CONTAINER = FULL VIEWPORT
+     (critical for line parity)
+  ---------------------------------- */
   section.chat,
   .chat {
-    display:flex !important;
-    flex-direction:column !important;
-    height:auto !important;
-    overflow:hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
   }
 
-  /* Scrollable message area */
+  /* ---------------------------------
+     COMPRESS TOP UI (NO REMOVALS)
+  ---------------------------------- */
+  .hero {
+    padding: 12px 14px !important;
+  }
+
+  .hero h2 {
+    font-size: 18px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .hero p {
+    font-size: 13px !important;
+    line-height: 1.4;
+  }
+
+  .toolbar {
+    padding: 6px 10px !important;
+    gap: 6px !important;
+  }
+
+  .suggest {
+    padding: 6px 10px !important;
+    gap: 6px !important;
+  }
+
+  /* ---------------------------------
+     MESSAGE AREA — MAX DENSITY
+  ---------------------------------- */
   .chat .messages {
-    flex:1 1 auto !important;
-    overflow-y:auto !important;
-    -webkit-overflow-scrolling:touch;
-    min-height:55vh !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;          /* ⬅️ removes artificial limit */
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    padding: 10px 12px !important;
+    gap: 10px !important;
   }
 
-  /* ALWAYS hide the side panels unless opened via accordion */
-  aside.panel {
-    display:none;
+
+  .suggest.mobile-hidden {
+    display: none !important;
   }
 
-  /* Accordion Buttons */
-  .accordion-toggle {
-    width:100%;
-    padding:14px 16px;
-    font-size:16px;
-    font-weight:600;
-    background:#141a22;
-    border:1px solid rgba(125,211,252,0.25);
-    border-radius:12px;
-    color:var(--text);
-    cursor:pointer;
-    text-align:left;
-  }
-
-  /* When .accordion-open is ACTIVE, reveal the next panel */
-  .accordion-open + aside.panel {
-    display:block !important;
-    margin-top:10px;
-  }
-
-  /* Order on mobile */
-  section.chat { order:1; }
-  #teachingsAccordion { order:2; }
-  #teachingsPanel { order:3; }
-  #destinyAccordion { order:4; }
-  #destinyPanel { order:5; }
+  .bubble.bot.collapsed {
+  max-height: 16.5em;
+  overflow: hidden;
+  position: relative;
 }
+
+.bubble.bot.collapsed::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3em;
+  background: linear-gradient(
+    to bottom,
+    rgba(18,26,35,0),
+    rgba(18,26,35,1)
+  );
+}
+
+.read-more-btn {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+
+
+
+  .bubble {
+    max-width: 92% !important;         /* prevents early wrapping */
+    padding: 10px 12px !important;
+    font-size: 14px !important;
+    line-height: 1.45 !important;
+  }
+
+  /* ---------------------------------
+     INPUT BAR (KEYBOARD SAFE)
+  ---------------------------------- */
+  .inputbar {
+    padding: 8px !important;
+    gap: 8px !important;
+  }
+
+  .textbox {
+    min-height: 42px !important;
+    max-height: 120px !important;
+    padding: 10px !important;
+    font-size: 14px;
+  }
+
+  /* ---------------------------------
+     ACCORDION PANELS
+  ---------------------------------- */
+  aside.panel {
+    display: none;
+  }
+
+  .accordion-toggle {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 15px;
+    font-weight: 600;
+    background: #141a22;
+    border: 1px solid rgba(125,211,252,0.25);
+    border-radius: 12px;
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .accordion-open + aside.panel {
+    display: block !important;
+    margin-top: 8px;
+  }
+
+  /* ---------------------------------
+     MOBILE ORDER
+  ---------------------------------- */
+  section.chat { order: 1; }
+  #teachingsAccordion { order: 2; }
+  #teachingsPanel { order: 3; }
+  #destinyAccordion { order: 4; }
+  #destinyPanel { order: 5; }
+}
+
 
 </style>
 </head>
@@ -691,15 +789,55 @@ function addMessage(role, text) {
   const box = document.createElement('div');
   box.className = `bubble ${role}`;
   box.innerHTML = text.replace(/\n/g,'<br>');
+
+  const isMobile = window.innerWidth <= 900;
+  const isBot = role === "bot";
+
   qs('#messages').appendChild(box);
+
+  // MOBILE: collapse long bot messages
+  if (isMobile && isBot && box.scrollHeight > 260) {
+    box.classList.add("collapsed");
+
+    const btn = document.createElement("div");
+    btn.className = "read-more-btn";
+    btn.textContent = "Read more";
+
+    btn.addEventListener("click", () => {
+      box.classList.remove("collapsed");
+      btn.remove();
+    });
+
+    box.after(btn);
+  }
+
   qs('#messages').scrollTop = qs('#messages').scrollHeight;
 }
+
+
+let hasSentFirstMessage = false;
+
+function hideMobileSuggestionsOnce() {
+  if (window.innerWidth > 900) return;
+
+  const suggest = document.getElementById("quickRow");
+  if (!suggest) return;
+
+  suggest.classList.add("mobile-hidden");
+}
+
 
 async function sendChat(text){
   if (!text.trim() || sending) return;
 
   addMessage("user", text);
   messages.push({ role:"user", text });
+
+if (!hasSentFirstMessage) {
+  hasSentFirstMessage = true;
+  hideMobileSuggestionsOnce();
+}
+
 
   sending = true;
 
