@@ -691,7 +691,12 @@ async function sendChat(text){
 
   addMessage("bot", "Typing…");
 
-  let payload = { messages };
+  let payload = {
+   messages,
+   name: qs('#nameInput')?.value || "",
+   dob: qs('#dobInput')?.value || ""
+ };
+
 
   try {
     const res = await fetch('/chat', {
