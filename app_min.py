@@ -8501,28 +8501,28 @@ def chat():
                     }]
                 }), 200
 
-        # ────────────────────────────────────────────────────────────
-        # 8) PROPHETIC FAST-PATH
-        # ────────────────────────────────────────────────────────────
-        if intent_now == "prophetic" and not PROPHECY_KEYWORDS.search(user_text or ""):
+        FOLLOW_UP_RX = re.compile(r"\b(why|explain|go deeper|expand|what do you mean)\b", re.I)
+
+        if FOLLOW_UP_RX.search(user_text):
+            intent_now = "explain"
+
+
+        if intent_now == "prophetic" and not already_prophesied:
             theme_guess = _maybe_theme_from_profile(full_name, birthdate)
+
             out = build_prophetic_word(full_name, birthdate, theme_guess)
             out = expand_scriptures_in_text(out)
-
-            try:
-                hits_all = blended_search(user_text)
-                cites = format_cites(filter_hits_for_context(hits_all, "prophetic"))
-            except Exception:
-                cites = []
 
             return jsonify({
                 "messages": [{
                     "role": "assistant",
-                    "model": "prophetic",
+                    "model": "prophetic_seed",
                     "text": out,
-                    "cites": cites,
-                }]
+                    "cites": [],
+                }],
+                "prophecy_used": True
             }), 200
+
 
         # ────────────────────────────────────────────────────────────
         # 9) FACES OF EVE / BOOK FAST-PATH
@@ -8562,6 +8562,9 @@ def chat():
                 }), 200
         except Exception:
             pass
+
+        prophetic_entropy = f"variation_seed:{int(time.time()) % 100000}"
+
 
         # ────────────────────────────────────────────────────────────
         # 11) RETRIEVAL & GPT GENERATION (GPT-ONLY)
