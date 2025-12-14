@@ -534,7 +534,7 @@ function revealApp() {
 }
 
 ['click','touchstart','pointerdown','keydown','wheel'].forEach(evt => {
-  window.addEventListener(evt, revealApp, { passive:true });
+ window.addEventListener(evt, revealApp, { passive:true, once:true });
 });
 
 skipIntro.addEventListener("click", revealApp);
