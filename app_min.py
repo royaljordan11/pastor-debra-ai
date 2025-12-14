@@ -1782,11 +1782,12 @@ def _build_history_block() -> str:
         return ""
 
     parts = []
-
-    for u, a in CONV_HISTORY:
-        parts.append(f"User: {u}\nPastor Debra: {a}")
+    for u, a in CONV_HISTORY[-4:]:
+        if u and a:
+            parts.append(f"User: {u}\nPastor Debra: {a}")
 
     return "\n\n".join(parts)
+
 
 
     # -----------------------------
@@ -7734,16 +7735,18 @@ def _gpt_answer_impl(
     return _record_and_return(user_text, msg)
 
 def gpt_answer(
-    user_text: str,
-    raw_hits: List["Hit"],
-    no_cache: bool = False,
-    comfort_mode: bool = False,
+    prompt: str,
+    raw_hits=None,
+    hits_ctx=None,
+    no_cache=False,
+    comfort_mode=False,
     scripture_hint=None,
     history=None,
-    **_,
-) -> str:
-    user_text = (user_text or "").strip()
-    simple_key = _normalize_simple(user_text)
+    system_hint=None,
+):
+    raw_hits = raw_hits or []
+    hits_ctx = hits_ctx or []
+
 
 
     # ---------------------------------------------------------------------
@@ -8504,6 +8507,49 @@ def chat():
                 }]
             }), 200
 
+        # ─────────────────────────────────────────────
+        # DESTINY THEME EXPANSION (Ask Pastor Debra)
+        # ─────────────────────────────────────────────
+        if user_text.lower().startswith("ask pastor debra about"):
+            theme_num = _maybe_theme_from_profile(full_name, birthdate)
+
+            if theme_num and theme_num in DESTINY_THEME_NAMES:
+                theme_name = DESTINY_THEME_NAMES[theme_num]
+
+                system_hint = (
+                    "You are Pastor Debra Jordan. "
+                    "Expand this Destiny Theme with biblical depth, "
+                    "one Scripture, and one practical application. "
+                    "Speak directly and personally."
+                )
+
+                prompt = (
+                    f"My Destiny Theme is '{theme_name}'. "
+                    "Please explain what this means for my life right now. "
+                    "Include one Scripture and one practical step."
+                )
+
+                out = gpt_answer(
+                    prompt,
+                    raw_hits=[],
+                    hits_ctx=[],
+                    no_cache=True,
+                    comfort_mode=False,
+                    scripture_hint=None,
+                    history=[],
+                    system_hint=system_hint
+                )
+
+                return jsonify({
+                    "messages": [{
+                        "role": "assistant",
+                        "model": "destiny",
+                        "text": expand_scriptures_in_text(out),
+                        "cites": []
+                    }]
+                }), 200
+
+
         # ────────────────────────────────────────────────────────────
         # 3) ADVICE / COUNSEL
         # ────────────────────────────────────────────────────────────
@@ -8564,6 +8610,7 @@ def chat():
 
         out = gpt_answer(
             user_text,
+            raw_hits=[],
             hits_ctx=[],
             no_cache=True,
             comfort_mode=is_in_distress(user_text),
