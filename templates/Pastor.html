@@ -869,8 +869,9 @@ if (!hasSentFirstMessage) {
   const hero = document.querySelector('.hero');
   if (hero) hero.remove();
 
-
-
+  requestAnimationFrame(() => {
+  qs('#messages').scrollTop = qs('#messages').scrollHeight;
+});
 
   sending = true;
 
