@@ -1654,16 +1654,15 @@ def handle_sop(user_text: str) -> str:
 
 
 
-def build_prophetic_word(
+def build_prophetic_seed(
     full_name: str = "",
-    birthdate: str = "",
     theme_guess: Optional[tuple] = None,   # (num, name, meaning)
     topic: str = "general",
     last_sentence: Optional[str] = None,
-) -> Optional[str]:
+) -> str:
     """
-    Destiny-theme + topic-based prophetic reply in Pastor Debra's tone.
-    Used as a prophetic SEED (first prophecy in a session).
+    Deterministic prophetic SEED.
+    Called ONCE per session.
     """
 
     # -----------------------------
@@ -1680,18 +1679,15 @@ def build_prophetic_word(
             pass
 
     # -----------------------------
-    # Normalize name
+    # Name
     # -----------------------------
     name = _safe_name(full_name).strip() or "Beloved"
 
     # -----------------------------
-    # Get topic block
+    # Topic block
     # -----------------------------
     topic_block = PROPHETIC_LIBRARY.get(topic) or PROPHETIC_LIBRARY.get("general", {})
 
-    # -----------------------------
-    # Build sentence pool
-    # -----------------------------
     theme_lines = []
     if theme_name and theme_name in topic_block:
         theme_lines = topic_block.get(theme_name, []) or []
@@ -1702,7 +1698,6 @@ def build_prophetic_word(
     if not pool:
         pool = ["I sense the Lord steadying your steps in this season."]
 
-    # Avoid repeating the same sentence
     if last_sentence and last_sentence in pool and len(pool) > 1:
         pool = [s for s in pool if s != last_sentence]
 
@@ -1711,33 +1706,17 @@ def build_prophetic_word(
     # -----------------------------
     # Intro
     # -----------------------------
-    if name and theme_name:
+    if theme_name:
         intro = f"{name}, I sense this for you as a '{theme_name}': "
-    elif name:
-        intro = f"{name}, I sense this for you: "
     else:
-        intro = "Beloved, hear this: "
+        intro = f"{name}, I sense this for you: "
 
-    # -----------------------------
-    # Scripture + step
-    # -----------------------------
     scripture = SCRIPTURE_BY_TOPIC.get(
         topic,
-        "Isaiah 58:11 — “And the LORD shall guide thee continually…”",
-    )
-    step = PRACTICAL_STEP_BY_TOPIC.get(
-        topic,
-        "Ask the Lord for one small, clear step of obedience this week and write it down.",
+        "Isaiah 58:11 — “The LORD will guide you continually…”",
     )
 
-    # -----------------------------
-    # Final message
-    # -----------------------------
-    message = (
-        f"{intro}{base_sentence}\n\n"
-        f"Scripture: {scripture}\n\n"
-        f"Practical Step: {step}"
-    )
+    message = f"{intro}{base_sentence}\n\nScripture: {scripture}"
 
     return message
 
@@ -1748,44 +1727,6 @@ BOOK_COUNT_PAT = re.compile(r"\b(how\s+many\s+books\s+(have\s+you\s+)?(written|a
 
 def _pick_scripture_line(meta: Dict[str, Any]) -> Optional[str]:
     # Try to find one verse ref from faces metadata
-    sc = meta.get("scripture")
-    if isinstance(sc, list) and sc:
-        # try to grab first non-empty text or reference
-        for s in sc:
-            ref = (s.get("ref") or s.get("reference") or "").strip() if isinstance(s, dict) else ""
-            if ref:
-                return f"Scripture: {ref}"
-        # fallback to text-only entries by extracting a plausible ref-like tail
-    return None
-
-def faces_of_eve_answer(user_text: str) -> Optional[str]:
-    t = (user_text or "").strip()
-    if not t:
-        return None
-
-    # 1) "How many books…" – answer from PUBLIC_BIO if present
-    if BOOK_COUNT_PAT.search(t.lower()):
-        n_text = (PUBLIC_BIO.get("books_written") or "").strip()
-        # Keep it short and on-brand
-        out = (f"I’ve authored {n_text if n_text else 'several books'} to equip the Church. "
-               f"Scripture: Ecclesiastes 12:12\n"
-               f"What themes would you like me to expand on?")
-        return expand_scriptures_in_text(out)
-
-    # 2) "favorite chapter" – we can prefer a chapter-like hit then phrase it
-    # Search Faces only; use your existing TF-IDF + fuzz blend
-    hits = search_corpus(
-        query=user_text,
-        vec=faces_vec, mat=faces_mat, norm_texts=f_norm,
-        meta=load_corpora_and_build_indexes.faces_meta,
-        corpus_name="FACES_OF_EVE", k=5
-    )
-    if not hits:
-        return None
-
-    # Prefer items whose meta looks like a chapter/section
-    top = hits[0]
-    for h in hits:
         title = (h.meta.get("title") or h.meta.get("section") or "").lower()
         if any(w in title for w in ("chapter", "part", "section", "eve")):
             top = h
@@ -1965,6 +1906,44 @@ def answer_dev_meta(user_text: str) -> Optional[str]:
             "I can listen, reflect, share Scripture, and offer gentle next steps, but I am still being shaped by your "
             "training, your data, and the feedback of real people. Only the Holy Spirit truly knows every heart. "
             "My role is to be a careful, compassionate helper.\n\n"
+    sc = meta.get("scripture")
+    if isinstance(sc, list) and sc:
+        # try to grab first non-empty text or reference
+        for s in sc:
+            ref = (s.get("ref") or s.get("reference") or "").strip() if isinstance(s, dict) else ""
+            if ref:
+                return f"Scripture: {ref}"
+        # fallback to text-only entries by extracting a plausible ref-like tail
+    return None
+
+def faces_of_eve_answer(user_text: str) -> Optional[str]:
+    t = (user_text or "").strip()
+    if not t:
+        return None
+
+    # 1) "How many books…" – answer from PUBLIC_BIO if present
+    if BOOK_COUNT_PAT.search(t.lower()):
+        n_text = (PUBLIC_BIO.get("books_written") or "").strip()
+        # Keep it short and on-brand
+        out = (f"I’ve authored {n_text if n_text else 'several books'} to equip the Church. "
+               f"Scripture: Ecclesiastes 12:12\n"
+               f"What themes would you like me to expand on?")
+        return expand_scriptures_in_text(out)
+
+    # 2) "favorite chapter" – we can prefer a chapter-like hit then phrase it
+    # Search Faces only; use your existing TF-IDF + fuzz blend
+    hits = search_corpus(
+        query=user_text,
+        vec=faces_vec, mat=faces_mat, norm_texts=f_norm,
+        meta=load_corpora_and_build_indexes.faces_meta,
+        corpus_name="FACES_OF_EVE", k=5
+    )
+    if not hits:
+        return None
+
+    # Prefer items whose meta looks like a chapter/section
+    top = hits[0]
+    for h in hits:
             "As you continue to refine my prompts, guardrails, and examples, that “7” can grow—not toward perfection, "
             "but toward more faithful service."
         )
@@ -8330,14 +8309,12 @@ def chat():
         data = request.get_json(force=False, silent=True) or {}
         print("🟦 CHAT PAYLOAD:", data)
 
-        already_prophesied = bool(
-            data.get("prophecy_used") or
-            any(
-                m.get("role") == "assistant" and
-                m.get("model") in {"prophetic", "prophetic_seed"}
-                for m in (data.get("messages") or [])
-            )
+        already_prophesied = any(
+            m.get("role") == "assistant" and m.get("model") == "prophetic_seed"
+            for m in msgs
         )
+
+       
 
 
         msgs = data.get("messages", [])
@@ -8515,21 +8492,30 @@ def chat():
             intent_now = "explain"
 
 
+
+        if intent_now == "prophetic" and already_prophesied:
+            intent_now = "general"
+
+
+
         if intent_now == "prophetic" and not already_prophesied:
             theme_guess = _maybe_theme_from_profile(full_name, birthdate)
 
-            out = build_prophetic_word(full_name, birthdate, theme_guess)
-            out = expand_scriptures_in_text(out)
+            seed = build_prophetic_seed(
+                full_name=full_name,
+                theme_guess=theme_guess,
+                topic="general",
+            )
 
             return jsonify({
                 "messages": [{
                     "role": "assistant",
                     "model": "prophetic_seed",
-                    "text": out,
+                    "text": seed,
                     "cites": [],
-                }],
-                "prophecy_used": True
+                }]
             }), 200
+
 
 
         # ────────────────────────────────────────────────────────────
