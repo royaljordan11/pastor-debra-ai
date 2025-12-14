@@ -8131,6 +8131,12 @@ def gpt_answer(
     # ---------------------------------------------------------------------
     # 6) HARD FALLBACK
     # ---------------------------------------------------------------------
+    t_norm = _normalize_simple(user_text or "")
+
+    full_name = (data.get("name") or data.get("full_name") or "").strip()
+    birthdate = (data.get("dob") or data.get("birthdate") or "").strip()
+
+    
     msg = expand_scriptures_in_text(
         "Let’s invite the Lord into this moment. Scripture: Matthew 11:28\n"
         "Prayer: Jesus, steady our hearts and show one faithful next step. Amen.\n"
@@ -8144,12 +8150,6 @@ def gpt_answer(
         }]
     }), 200
 
-        # Normalize
-        t_norm = _normalize_simple(user_text or "")
-
-        # Extract profile data
-        full_name = (data.get("name") or data.get("full_name") or "").strip()
-        birthdate = (data.get("dob") or data.get("birthdate") or "").strip()
 
         # ────────────────────────────────────────────────────────────
         # 2) DESTINY THEME FAST-PATH
