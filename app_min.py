@@ -8350,8 +8350,6 @@ def match_theme_from_text(text: str):
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-
-
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
@@ -8377,8 +8375,6 @@ def chat():
         # 1) PARSE PAYLOAD
         # ────────────────────────────────────────────────────────────
         data = request.get_json(force=False, silent=True) or {}
-        print("🟦 CHAT PAYLOAD:", data)
-
         msgs = data.get("messages", [])
         no_cache = bool(data.get("no_cache"))
 
@@ -8431,17 +8427,28 @@ def chat():
         except Exception:
             intent_now = "general"
 
-        # Follow-up override (why / explain / go deeper)
-        FOLLOW_UP_RX = re.compile(r"\b(why|explain|go deeper|expand|what do you mean)\b", re.I)
+        # FOLLOW-UPS → prophetic_layer (NOT general)
+        FOLLOW_UP_RX = re.compile(
+            r"\b(why|explain|go deeper|expand|more detail|can you pray|pray for)\b",
+            re.I
+        )
         if FOLLOW_UP_RX.search(user_text):
-            intent_now = "general"
+            intent_now = "prophetic_layer"
 
-        # Lock prophecy after first seed
+        # Topic-specific prophecy (wealth, calling, etc.)
+        TOPIC_RX = re.compile(
+            r"\b(wealth|money|finances|calling|purpose|children|daughter|son|family)\b",
+            re.I
+        )
+        if TOPIC_RX.search(user_text):
+            intent_now = "prophetic_topic"
+
+        # Lock only the SEED, not prophecy itself
         if intent_now == "prophetic" and already_prophesied:
-            intent_now = "general"
+            intent_now = "prophetic_layer"
 
         # ────────────────────────────────────────────────────────────
-        # 4) ONE-TIME PROPHETIC SEED
+        # 4) PROPHETIC SEED (ONCE)
         # ────────────────────────────────────────────────────────────
         if intent_now == "prophetic" and not already_prophesied:
             theme_guess = _maybe_theme_from_profile(full_name, birthdate)
@@ -8462,7 +8469,45 @@ def chat():
             }), 200
 
         # ────────────────────────────────────────────────────────────
-        # 5) ADVICE FAST-PATH
+        # 5) PROPHETIC LAYER (EXPAND / PRAY / GO DEEPER)
+        # ────────────────────────────────────────────────────────────
+        if intent_now == "prophetic_layer":
+            out = build_prophetic_expansion(
+                subject=full_name or "your loved one",
+                history=msgs[-4:],
+            )
+            return jsonify({
+                "messages": [{
+                    "role": "assistant",
+                    "model": "prophetic_layer",
+                    "text": expand_scriptures_in_text(out),
+                    "cites": [],
+                }]
+            }), 200
+
+        # ────────────────────────────────────────────────────────────
+        # 6) PROPHETIC TOPIC (NEW AREA — wealth, children, etc.)
+        # ────────────────────────────────────────────────────────────
+        if intent_now == "prophetic_topic":
+            topic = "wealth" if "wealth" in t_norm or "money" in t_norm else "general"
+
+            out = build_prophetic_seed(
+                full_name=full_name or "Beloved",
+                theme_guess=_maybe_theme_from_profile(full_name, birthdate),
+                topic=topic,
+            )
+
+            return jsonify({
+                "messages": [{
+                    "role": "assistant",
+                    "model": "prophetic_topic",
+                    "text": expand_scriptures_in_text(out),
+                    "cites": [],
+                }]
+            }), 200
+
+        # ────────────────────────────────────────────────────────────
+        # 7) ADVICE FAST-PATH
         # ────────────────────────────────────────────────────────────
         if intent_now == "advice":
             try:
@@ -8471,36 +8516,22 @@ def chat():
                 category = None
 
             if category:
-                theme_guess = _maybe_theme_from_profile(full_name, birthdate)
-                out = build_pastoral_counsel(category, theme_guess)
-                out = expand_scriptures_in_text(out)
-
+                out = build_pastoral_counsel(
+                    category,
+                    _maybe_theme_from_profile(full_name, birthdate)
+                )
                 return jsonify({
                     "messages": [{
                         "role": "assistant",
                         "model": "advice",
-                        "text": out,
+                        "text": expand_scriptures_in_text(out),
                         "cites": [],
                     }]
                 }), 200
 
         # ────────────────────────────────────────────────────────────
-        # 6) FAQ / BOOK / FACES OF EVE
+        # 8) FAQ / BOOKS
         # ────────────────────────────────────────────────────────────
-        try:
-            maybe_faces = answer_faces_of_eve_or_books(user_text)
-            if maybe_faces:
-                return jsonify({
-                    "messages": [{
-                        "role": "assistant",
-                        "model": "faq",
-                        "text": maybe_faces,
-                        "cites": [],
-                    }]
-                }), 200
-        except Exception:
-            pass
-
         try:
             faq_reply = answer_pastor_debra_faq(user_text)
             if faq_reply:
@@ -8516,16 +8547,12 @@ def chat():
             pass
 
         # ────────────────────────────────────────────────────────────
-        # 7) GPT FALLBACK (COHERENT CONVERSATION)
+        # 9) GPT FALLBACK (ONLY WHEN APPROPRIATE)
         # ────────────────────────────────────────────────────────────
-        recent_history = []
-        for m in msgs[-6:]:
-            txt = (m.get("text") or "").strip()
-            if txt:
-                recent_history.append({
-                    "role": m.get("role", "user"),
-                    "content": txt
-                })
+        recent_history = [
+            {"role": m.get("role", "user"), "content": (m.get("text") or "").strip()}
+            for m in msgs[-6:] if (m.get("text") or "").strip()
+        ]
 
         out = gpt_answer(
             user_text,
@@ -8536,13 +8563,11 @@ def chat():
             history=recent_history,
         )
 
-        out = expand_scriptures_in_text(out)
-
         return jsonify({
             "messages": [{
                 "role": "assistant",
                 "model": "gpt",
-                "text": out,
+                "text": expand_scriptures_in_text(out),
                 "cites": [],
             }]
         }), 200
