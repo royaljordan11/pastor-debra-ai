@@ -401,7 +401,7 @@
 
     <div class="hero">
       <h2>“Speak, Lord — Your servant is listening.”</h2>
-      <p>I’m Pastor Debra Jordan. Bring your heart — I’ll pray with you, open Scripture, and offer Christ-centered counsel.</p>
+      <p>I’m Pastor Debra Jordan digital twin. Bring your heart — I’ll pray with you, open Scripture, and offer Christ-centered counsel.</p>
     </div>
 
     <!-- Toolbar -->
@@ -469,7 +469,14 @@
 
         <div class="hr"></div>
 
-        <button id="askAboutThemeBtn" class="btn">Ask Pastor Debra about this</button>
+        <button
+        id="askAboutThemeBtn"
+        class="btn"
+        onclick="sendChat('Ask Pastor Debra about this')"
+      >
+        Ask Pastor Debra about this
+        </button>
+
         <button id="copyThemeBtn" class="btn" style="background:#0f141a;color:var(--text);border:1px solid rgba(125,211,252,.22)">Copy Guidance</button>
       </div>
 
@@ -731,6 +738,11 @@ qs('#textbox').addEventListener('keydown', e => {
     qs('#sendBtn').click();
   }
 });
+
+  function askPastorDebra(){
+  sendChat("Ask Pastor Debra about this");
+}
+
 
 
 /* ============================================================
