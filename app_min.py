@@ -7689,7 +7689,8 @@ def chat():
         user_text = (msgs[-1].get("text") or "").strip()[:MAX_INPUT_CHARS]
         full_name = (data.get("name") or data.get("full_name") or "").strip()
         birthdate = (data.get("dob") or data.get("birthdate") or "").strip()
-        t_norm = _normalize_simple(user_text)
+        t_norm = _normalize_simple(user_text).lower().strip()
+
 
         # Build short rolling history
         history = []
