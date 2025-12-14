@@ -8128,27 +8128,27 @@ def gpt_answer(
 
         return _record_and_return(user_text, out)
 
-    # ---------------------------------------------------------------------
-    # 6) HARD FALLBACK
-    # ---------------------------------------------------------------------
-    t_norm = _normalize_simple(user_text or "")
+        # ---------------------------------------------------------------------
+        # 6) HARD FALLBACK
+        # ---------------------------------------------------------------------
+        t_norm = _normalize_simple(user_text or "")
 
-    full_name = (data.get("name") or data.get("full_name") or "").strip()
-    birthdate = (data.get("dob") or data.get("birthdate") or "").strip()
+        full_name = (data.get("name") or data.get("full_name") or "").strip()
+        birthdate = (data.get("dob") or data.get("birthdate") or "").strip()
 
     
-    msg = expand_scriptures_in_text(
-        "Let’s invite the Lord into this moment. Scripture: Matthew 11:28\n"
-        "Prayer: Jesus, steady our hearts and show one faithful next step. Amen.\n"
-        "What’s one small action you can take today?"
-    )
-    return jsonify({
-        "messages": [{
-            "role": "assistant",
-            "model": "sys",
-            "text": msg
-        }]
-    }), 200
+        msg = expand_scriptures_in_text(
+            "Let’s invite the Lord into this moment. Scripture: Matthew 11:28\n"
+            "Prayer: Jesus, steady our hearts and show one faithful next step. Amen.\n"
+            "What’s one small action you can take today?"
+        )
+        return jsonify({
+            "messages": [{
+                "role": "assistant",
+                "model": "sys",
+                "text": msg
+            }]
+        }), 200
 
 
         # ────────────────────────────────────────────────────────────
