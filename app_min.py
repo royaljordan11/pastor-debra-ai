@@ -8360,7 +8360,7 @@ def chat():
               .split(",")[0].strip())
         if _throttle(ip):
             msg = (
-                "You’re sending messages very quickly. Please pause a moment and try again.\n"
+                "Please pause for a moment before sending another message.\n"
                 "Scripture: Psalm 46:10"
             )
             return jsonify({
@@ -8383,7 +8383,7 @@ def chat():
                 "messages": [{
                     "role": "assistant",
                     "model": "sys",
-                    "text": "Malformed payload: 'messages' must be a list."
+                    "text": "Malformed request. Please try again."
                 }]
             }), 400
 
@@ -8392,145 +8392,44 @@ def chat():
                 "messages": [{
                     "role": "assistant",
                     "model": "sys",
-                    "text": "Welcome. How can I pray with you or help today?"
+                    "text": "Welcome. How can I pray with you today?"
                 }]
             }), 200
 
         # ────────────────────────────────────────────────────────────
-        # 2) SESSION STATE
+        # 2) USER INPUT + CONTEXT
         # ────────────────────────────────────────────────────────────
-        already_prophesied = any(
-            m.get("role") == "assistant" and m.get("model") == "prophetic_seed"
-            for m in msgs
-        )
-
         user_text = (msgs[-1].get("text") or "").strip()[:MAX_INPUT_CHARS]
         if not user_text:
             return jsonify({
                 "messages": [{
                     "role": "assistant",
                     "model": "sys",
-                    "text": "Could you share a little more? I’m here with you."
+                    "text": "I’m listening. What’s on your heart?"
                 }]
             }), 200
-
-        t_norm = _normalize_simple(user_text)
 
         full_name = (data.get("name") or data.get("full_name") or "").strip()
         birthdate = (data.get("dob") or data.get("birthdate") or "").strip()
 
-        # ────────────────────────────────────────────────────────────
-        # 3) INTENT DETECTION
-        # ────────────────────────────────────────────────────────────
-        try:
-            intent_now = detect_intent(user_text)
-        except Exception:
-            intent_now = "general"
-
-        # FOLLOW-UPS → prophetic_layer (NOT general)
-        FOLLOW_UP_RX = re.compile(
-            r"\b(why|explain|go deeper|expand|more detail|can you pray|pray for)\b",
-            re.I
-        )
-        if FOLLOW_UP_RX.search(user_text):
-            intent_now = "prophetic_layer"
-
-        # Topic-specific prophecy (wealth, calling, etc.)
-        TOPIC_RX = re.compile(
-            r"\b(wealth|money|finances|calling|purpose|children|daughter|son|family)\b",
-            re.I
-        )
-        if TOPIC_RX.search(user_text):
-            intent_now = "prophetic_topic"
-
-        # Lock only the SEED, not prophecy itself
-        if intent_now == "prophetic" and already_prophesied:
-            intent_now = "prophetic_layer"
+        # Normalize text
+        t_norm = _normalize_simple(user_text)
 
         # ────────────────────────────────────────────────────────────
-        # 4) PROPHETIC SEED (ONCE)
+        # 3) SUBJECT EXTRACTION (VERY IMPORTANT)
         # ────────────────────────────────────────────────────────────
-        if intent_now == "prophetic" and not already_prophesied:
-            theme_guess = _maybe_theme_from_profile(full_name, birthdate)
-
-            seed = build_prophetic_seed(
-                full_name=full_name,
-                theme_guess=theme_guess,
-                topic="general",
-            )
-
-            return jsonify({
-                "messages": [{
-                    "role": "assistant",
-                    "model": "prophetic_seed",
-                    "text": expand_scriptures_in_text(seed),
-                    "cites": [],
-                }]
-            }), 200
+        subject = None
+        if re.search(r"\b(daughter|son|child)\b", t_norm):
+            subject = "your child"
+        elif re.search(r"\b(cousin|sister|brother|mother|father)\b", t_norm):
+            subject = "your loved one"
+        elif full_name:
+            subject = full_name
+        else:
+            subject = "you"
 
         # ────────────────────────────────────────────────────────────
-        # 5) PROPHETIC LAYER (EXPAND / PRAY / GO DEEPER)
-        # ────────────────────────────────────────────────────────────
-        if intent_now == "prophetic_layer":
-            out = build_prophetic_expansion(
-                subject=full_name or "your loved one",
-                history=msgs[-4:],
-            )
-            return jsonify({
-                "messages": [{
-                    "role": "assistant",
-                    "model": "prophetic_layer",
-                    "text": expand_scriptures_in_text(out),
-                    "cites": [],
-                }]
-            }), 200
-
-        # ────────────────────────────────────────────────────────────
-        # 6) PROPHETIC TOPIC (NEW AREA — wealth, children, etc.)
-        # ────────────────────────────────────────────────────────────
-        if intent_now == "prophetic_topic":
-            topic = "wealth" if "wealth" in t_norm or "money" in t_norm else "general"
-
-            out = build_prophetic_seed(
-                full_name=full_name or "Beloved",
-                theme_guess=_maybe_theme_from_profile(full_name, birthdate),
-                topic=topic,
-            )
-
-            return jsonify({
-                "messages": [{
-                    "role": "assistant",
-                    "model": "prophetic_topic",
-                    "text": expand_scriptures_in_text(out),
-                    "cites": [],
-                }]
-            }), 200
-
-        # ────────────────────────────────────────────────────────────
-        # 7) ADVICE FAST-PATH
-        # ────────────────────────────────────────────────────────────
-        if intent_now == "advice":
-            try:
-                category = _advice_category(user_text)
-            except Exception:
-                category = None
-
-            if category:
-                out = build_pastoral_counsel(
-                    category,
-                    _maybe_theme_from_profile(full_name, birthdate)
-                )
-                return jsonify({
-                    "messages": [{
-                        "role": "assistant",
-                        "model": "advice",
-                        "text": expand_scriptures_in_text(out),
-                        "cites": [],
-                    }]
-                }), 200
-
-        # ────────────────────────────────────────────────────────────
-        # 8) FAQ / BOOKS
+        # 4) FAST FAQ (DONATION / HOUSE QUESTIONS, ETC.)
         # ────────────────────────────────────────────────────────────
         try:
             faq_reply = answer_pastor_debra_faq(user_text)
@@ -8547,12 +8446,46 @@ def chat():
             pass
 
         # ────────────────────────────────────────────────────────────
-        # 9) GPT FALLBACK (ONLY WHEN APPROPRIATE)
+        # 5) ADVICE PATH
         # ────────────────────────────────────────────────────────────
-        recent_history = [
-            {"role": m.get("role", "user"), "content": (m.get("text") or "").strip()}
-            for m in msgs[-6:] if (m.get("text") or "").strip()
-        ]
+        if detect_intent(user_text) == "advice":
+            try:
+                category = _advice_category(user_text)
+                if category:
+                    out = build_pastoral_counsel(
+                        category,
+                        _maybe_theme_from_profile(full_name, birthdate)
+                    )
+                    return jsonify({
+                        "messages": [{
+                            "role": "assistant",
+                            "model": "advice",
+                            "text": expand_scriptures_in_text(out),
+                            "cites": [],
+                        }]
+                    }), 200
+            except Exception:
+                pass
+
+        # ────────────────────────────────────────────────────────────
+        # 6) GPT-LED PROPHETIC / PASTORAL RESPONSE (PRIMARY PATH)
+        # ────────────────────────────────────────────────────────────
+        recent_history = []
+        for m in msgs[-6:]:
+            txt = (m.get("text") or "").strip()
+            if txt:
+                recent_history.append({
+                    "role": m.get("role", "user"),
+                    "content": txt
+                })
+
+        # Inject subject clarity into GPT context
+        system_hint = (
+            f"The user is asking about {subject}. "
+            "Respond in a warm, pastoral, prophetic tone. "
+            "Avoid repeating the same phrasing as earlier replies. "
+            "Stay relational and specific."
+        )
 
         out = gpt_answer(
             user_text,
@@ -8561,6 +8494,7 @@ def chat():
             comfort_mode=False,
             scripture_hint=None,
             history=recent_history,
+            system_hint=system_hint
         )
 
         return jsonify({
@@ -8588,8 +8522,6 @@ def chat():
                 "text": expand_scriptures_in_text(safe)
             }]
         }), 200
-
-
 
 
 # ────────── Ops ──────────
