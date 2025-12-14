@@ -8428,10 +8428,8 @@ def chat():
         # ────────────────────────────────────────────────────────────
         # 4) SUBJECT RESOLUTION (CRITICAL)
         # ────────────────────────────────────────────────────────────
-        if re.search(r"\b(daughter)\b", t_norm):
-            subject = "your daughter"
-        elif re.search(r"\b(son|child)\b", t_norm):
-            subject = "your child"
+        if re.search(r"\b(daughter|son|child)\b", t_norm):
+            subject = "your daughter" if "daughter" in t_norm else "your child"
         elif re.search(r"\b(cousin|sister|brother|mother|father)\b", t_norm):
             subject = "your loved one"
         elif full_name:
@@ -8440,23 +8438,7 @@ def chat():
             subject = "you"
 
         # ────────────────────────────────────────────────────────────
-        # 5) INTENT DETECTION (WITH OVERRIDES)
-        # ────────────────────────────────────────────────────────────
-        try:
-            intent_now = detect_intent(user_text)
-        except Exception:
-            intent_now = "general"
-
-        PROPHETIC_RX = re.compile(
-            r"\b(prophetic word|prophecy|prophesy|speak over|pray over|prayer for)\b",
-            re.I
-        )
-
-        if PROPHETIC_RX.search(user_text):
-            intent_now = "prophetic"
-
-        # ────────────────────────────────────────────────────────────
-        # 6) FAQ FAST-PATH
+        # 5) FAST FAQ (HOUSE / DONATION / LOGISTICS)
         # ────────────────────────────────────────────────────────────
         try:
             faq_reply = answer_pastor_debra_faq(user_text)
@@ -8473,10 +8455,10 @@ def chat():
             pass
 
         # ────────────────────────────────────────────────────────────
-        # 7) ADVICE PATH
+        # 6) ADVICE PATH (ONLY WHEN CLEAR)
         # ────────────────────────────────────────────────────────────
-        if intent_now == "advice":
-            try:
+        try:
+            if detect_intent(user_text) == "advice":
                 category = _advice_category(user_text)
                 if category:
                     out = build_pastoral_counsel(
@@ -8491,24 +8473,29 @@ def chat():
                             "cites": [],
                         }]
                     }), 200
-            except Exception:
-                pass
+        except Exception:
+            pass
 
         # ────────────────────────────────────────────────────────────
-        # 8) GPT-LED PROPHETIC / PASTORAL RESPONSE
+        # 7) GPT PROPHETIC / PASTORAL RESPONSE (PRIMARY ENGINE)
         # ────────────────────────────────────────────────────────────
         recent_history = [
-            {"role": m.get("role", "user"), "content": (m.get("text") or "").strip()}
-            for m in msgs[-6:] if (m.get("text") or "").strip()
+            {
+                "role": m.get("role", "user"),
+                "content": (m.get("text") or "").strip()
+            }
+            for m in msgs[-6:]
+            if (m.get("text") or "").strip()
         ]
 
         system_hint = (
             f"The user is asking about {subject}. "
-            "Deliver a prophetic or pastoral response when requested. "
-            "Do NOT treat abstract phrases as names. "
-            "Avoid repeating previous phrasing. "
-            "Do NOT default to generic comfort scripture unless distress is explicit. "
-            "Be specific, forward-looking, and relational."
+            "Respond in a prophetic, pastoral voice. "
+            "Do NOT analyze abstract phrases as names. "
+            "If no real name is given, speak directly to the person or season. "
+            "Do not repeat prior phrasing. "
+            "Only use comfort prayers if distress is explicit. "
+            "Be specific, forward-looking, and Spirit-led."
         )
 
         out = gpt_answer(
@@ -8546,7 +8533,6 @@ def chat():
                 "text": expand_scriptures_in_text(safe)
             }]
         }), 200
-
 
 
 # ────────── Ops ──────────
