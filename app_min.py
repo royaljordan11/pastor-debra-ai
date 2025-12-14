@@ -1657,85 +1657,82 @@ def handle_sop(user_text: str) -> str:
 def build_prophetic_word(
     full_name: str = "",
     birthdate: str = "",
-    theme: Optional[int] = None,          # numeric destiny theme (1,2,3,...,11,22,33)
-    topic: str = "general",               # e.g. "career", "protection", "finances", etc.
-    last_sentence: Optional[str] = None,  # to avoid repeating the exact same line
+    theme_guess: Optional[tuple] = None,   # (num, name, meaning)
+    topic: str = "general",
+    last_sentence: Optional[str] = None,
 ) -> Optional[str]:
     """
     Destiny-theme + topic-based prophetic reply in Pastor Debra's tone.
-
-    - full_name: user name (for personalization)
-    - birthdate: kept for future use (currently unused here)
-    - theme: numeric destiny theme (1,2,3,4,5,6,7,8,9,11,22,33)
-    - topic: key into PROPHETIC_LIBRARY (career, finances, protection, etc.)
-    - last_sentence: the last prophetic sentence used for this user/topic
-                    (optional, for non-repetition)
-
-    If theme is None -> return None (let your GPT engine or other logic handle it).
+    Used as a prophetic SEED (first prophecy in a session).
     """
 
-    # fallback to default
-    theme_prophecies = PROPHETIC_LIBRARY.get(topic, {})
-    if theme_name in theme_prophecies:
-        return random.choice(theme_prophecies[theme_name])
-    else:
-        return random.choice(theme_prophecies.get("default", ["I sense the Lord steadying your steps."]))
+    # -----------------------------
+    # Normalize theme safely
+    # -----------------------------
+    theme_num = None
+    theme_name = None
+    theme_meaning = None
 
-    # Normalized name
+    if theme_guess:
+        try:
+            theme_num, theme_name, theme_meaning = theme_guess
+        except Exception:
+            pass
+
+    # -----------------------------
+    # Normalize name
+    # -----------------------------
     name = _safe_name(full_name).strip() or "Beloved"
 
-    # Map numeric destiny theme -> Christian theme name ("Pioneer Grace", etc.)
-    destiny_label = DESTINY_THEME_NAMES.get(theme)
+    # -----------------------------
+    # Get topic block
+    # -----------------------------
+    topic_block = PROPHETIC_LIBRARY.get(topic) or PROPHETIC_LIBRARY.get("general", {})
 
-    # Get topic block from your PROPHETIC_LIBRARY
-    topic_block = PROPHETIC_LIBRARY.get(topic)
-    if not topic_block:
-        # fallback to general if unknown topic
-        topic_block = PROPHETIC_LIBRARY.get("general", {})
+    # -----------------------------
+    # Build sentence pool
+    # -----------------------------
+    theme_lines = []
+    if theme_name and theme_name in topic_block:
+        theme_lines = topic_block.get(theme_name, []) or []
 
-    # Theme-specific lines
-    theme_lines: list[str] = []
-    if destiny_label and destiny_label in topic_block:
-        theme_lines = topic_block.get(destiny_label, []) or []
+    default_lines = topic_block.get("default", []) or []
 
-    # Default lines for that topic
-    default_lines: list[str] = topic_block.get("default", []) or []
-
-    # Build the pool of possible sentences
-    pool = (theme_lines or []) + default_lines
+    pool = theme_lines + default_lines
     if not pool:
-        # hard fallback to general default if somehow empty
-        pool = PROPHETIC_LIBRARY.get("general", {}).get("default", ["God is with you."])
+        pool = ["I sense the Lord steadying your steps in this season."]
 
-    # Avoid repeating the exact same sentence if last_sentence is provided
+    # Avoid repeating the same sentence
     if last_sentence and last_sentence in pool and len(pool) > 1:
-        candidates = [s for s in pool if s != last_sentence]
-    else:
-        candidates = pool
+        pool = [s for s in pool if s != last_sentence]
 
-    base_sentence = random.choice(candidates)
+    base_sentence = random.choice(pool)
 
-    # Pastor Debra–style intro
-    if name and destiny_label:
-        intro = f"{name}, I sense this for you as a '{destiny_label}': "
+    # -----------------------------
+    # Intro
+    # -----------------------------
+    if name and theme_name:
+        intro = f"{name}, I sense this for you as a '{theme_name}': "
     elif name:
         intro = f"{name}, I sense this for you: "
-    elif destiny_label:
-        intro = f"There is a '{destiny_label}' grace at work in you: "
     else:
         intro = "Beloved, hear this: "
 
-    # Scripture + practical step
+    # -----------------------------
+    # Scripture + step
+    # -----------------------------
     scripture = SCRIPTURE_BY_TOPIC.get(
         topic,
-        "Isaiah 58:11 — “And the LORD shall guide thee continually, and satisfy thy soul in drought…”",
+        "Isaiah 58:11 — “And the LORD shall guide thee continually…”",
     )
     step = PRACTICAL_STEP_BY_TOPIC.get(
         topic,
         "Ask the Lord for one small, clear step of obedience this week and write it down.",
     )
 
-    # Assemble full message (feel free to tweak formatting/line breaks for frontend)
+    # -----------------------------
+    # Final message
+    # -----------------------------
     message = (
         f"{intro}{base_sentence}\n\n"
         f"Scripture: {scripture}\n\n"
@@ -1743,6 +1740,7 @@ def build_prophetic_word(
     )
 
     return message
+
 
 
 FACES_FAV_PAT = re.compile(r"\b(favorite|favourite)\s+(chapter|part|section)\b", re.I)
