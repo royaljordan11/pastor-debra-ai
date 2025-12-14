@@ -473,7 +473,7 @@
   id="askAboutThemeBtn"
   class="btn"
   type="button"
-  onclick="askPastorDebra(event)"
+  onclick="askPastorDebra()"
 >
   Ask Pastor Debra about this
 </button>
@@ -742,20 +742,18 @@ qs('#textbox').addEventListener('keydown', e => {
   }
 });
 
-function askPastorDebra(event){
-  if (event) event.preventDefault();
-
+function askPastorDebra() {
   const name = qs('#nameInput')?.value || "";
   const dob  = qs('#dobInput')?.value || "";
 
   if (!name && !dob) {
     toast("Please enter your name or DOB first.");
-    return false;
+    return;
   }
 
   sendChat("ask pastor debra about my destiny theme");
-  return false;
 }
+
 
 
 
@@ -855,7 +853,7 @@ qs('#calcBtn').addEventListener('click', handleCompute);
 ============================================================ */
 document.getElementById("year").textContent = new Date().getFullYear();
 loadVideos();
-addMessage("bot", "Welcome, beloved. I’m Pastor Debra Jordan. Share your heart, or enter your name and optional DOB and I’ll reflect with you on your Destiny Theme.");
+addMessage("bot", "Welcome, beloved. I’m Pastor Debra Jordan digital twin. Share your heart, or enter your name and optional DOB and I’ll reflect with you on your Destiny Theme.");
 </script>
 
 </body>
