@@ -471,12 +471,13 @@
 
 <button
   id="askAboutThemeBtn"
-  type="button"
   class="btn"
-  onclick="askPastorDebra()"
+  type="button"
+  onclick="askPastorDebra(event)"
 >
   Ask Pastor Debra about this
 </button>
+
 
 
         <button id="copyThemeBtn" class="btn" style="background:#0f141a;color:var(--text);border:1px solid rgba(125,211,252,.22)">Copy Guidance</button>
@@ -741,17 +742,21 @@ qs('#textbox').addEventListener('keydown', e => {
   }
 });
 
-function askPastorDebra(){
+function askPastorDebra(event){
+  if (event) event.preventDefault();
+
   const name = qs('#nameInput')?.value || "";
   const dob  = qs('#dobInput')?.value || "";
 
   if (!name && !dob) {
     toast("Please enter your name or DOB first.");
-    return;
+    return false;
   }
 
   sendChat("ask pastor debra about my destiny theme");
+  return false;
 }
+
 
 
 
