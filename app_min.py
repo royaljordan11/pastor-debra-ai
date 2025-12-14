@@ -8476,8 +8476,6 @@ def chat():
         full_name = (data.get("name") or data.get("full_name") or "").strip()
         birthdate = (data.get("dob") or data.get("birthdate") or "").strip()
 
-        intent_now = detect_intent(user_text)
-
         # Build short rolling history for GPT coherence
         history = []
         for m in msgs[-6:]:
@@ -8489,15 +8487,14 @@ def chat():
                 })
 
         # ────────────────────────────────────────────────────────────
-        # 2) PROPHETIC WORD (PRIMARY — NO FALLTHROUGH)
+        # 2) PROPHETIC WORD — HIGHEST PRIORITY
         # ────────────────────────────────────────────────────────────
-        if intent_now == "prophetic":
+        if detect_intent(user_text) == "prophetic":
             out = build_prophetic_word(
                 user_text=user_text,
                 full_name=full_name,
                 birthdate=birthdate,
             )
-
             return jsonify({
                 "messages": [{
                     "role": "assistant",
@@ -8507,82 +8504,8 @@ def chat():
                 }]
             }), 200
 
-        # ─────────────────────────────────────────────
-        # DESTINY THEME EXPANSION (Ask Pastor Debra)
-        # ─────────────────────────────────────────────
-        if user_text.lower().startswith("ask pastor debra about"):
-            theme_num = _maybe_theme_from_profile(full_name, birthdate)
-
-            if theme_num and theme_num in DESTINY_THEME_NAMES:
-                theme_name = DESTINY_THEME_NAMES[theme_num]
-
-                system_hint = (
-                    "You are Pastor Debra Jordan. "
-                    "Expand this Destiny Theme with biblical depth, "
-                    "one Scripture, and one practical application. "
-                    "Speak directly and personally."
-                )
-
-                prompt = (
-                    f"My Destiny Theme is '{theme_name}'. "
-                    "Please explain what this means for my life right now. "
-                    "Include one Scripture and one practical step."
-                )
-
-                out = gpt_answer(
-                    prompt,
-                    raw_hits=[],
-                    hits_ctx=[],
-                    no_cache=True,
-                    comfort_mode=False,
-                    scripture_hint=None,
-                    history=[],
-                    system_hint=system_hint
-                )
-
-                return jsonify({
-                    "messages": [{
-                        "role": "assistant",
-                        "model": "destiny",
-                        "text": expand_scriptures_in_text(out),
-                        "cites": []
-                    }]
-                }), 200
-
-
         # ────────────────────────────────────────────────────────────
-        # 3) ADVICE / COUNSEL
-        # ────────────────────────────────────────────────────────────
-        if intent_now == "advice":
-            category = _advice_category(user_text)
-            if category:
-                theme = _maybe_theme_from_profile(full_name, birthdate)
-                out = build_pastoral_counsel(category, theme)
-                return jsonify({
-                    "messages": [{
-                        "role": "assistant",
-                        "model": "advice",
-                        "text": expand_scriptures_in_text(out),
-                        "cites": []
-                    }]
-                }), 200
-
-        # ────────────────────────────────────────────────────────────
-        # 4) FAQ / IDENTITY / BOOKS
-        # ────────────────────────────────────────────────────────────
-        faq_reply = answer_pastor_debra_faq(user_text)
-        if faq_reply:
-            return jsonify({
-                "messages": [{
-                    "role": "assistant",
-                    "model": "faq",
-                    "text": expand_scriptures_in_text(faq_reply),
-                    "cites": []
-                }]
-            }), 200
-
-        # ────────────────────────────────────────────────────────────
-        # 4.5) DESTINY THEME DEEP DIVE (Ask Pastor Debra about this)
+        # 3) ASK PASTOR DEBRA ABOUT THIS (DESTINY DEEP DIVE)
         # ────────────────────────────────────────────────────────────
         if is_ask_pastor_about_destiny(user_text):
             theme_num = _maybe_theme_from_profile(full_name, birthdate)
@@ -8597,15 +8520,44 @@ def chat():
                     }]
                 }), 200
 
+        # ────────────────────────────────────────────────────────────
+        # 4) ADVICE / COUNSEL
+        # ────────────────────────────────────────────────────────────
+        if detect_intent(user_text) == "advice":
+            category = _advice_category(user_text)
+            if category:
+                theme = _maybe_theme_from_profile(full_name, birthdate)
+                out = build_pastoral_counsel(category, theme)
+                return jsonify({
+                    "messages": [{
+                        "role": "assistant",
+                        "model": "advice",
+                        "text": expand_scriptures_in_text(out),
+                        "cites": []
+                    }]
+                }), 200
 
         # ────────────────────────────────────────────────────────────
-        # 5) GENERAL GPT RESPONSE (PASTORAL, COHERENT)
+        # 5) FAQ / IDENTITY / BOOKS
+        # ────────────────────────────────────────────────────────────
+        faq_reply = answer_pastor_debra_faq(user_text)
+        if faq_reply:
+            return jsonify({
+                "messages": [{
+                    "role": "assistant",
+                    "model": "faq",
+                    "text": expand_scriptures_in_text(faq_reply),
+                    "cites": []
+                }]
+            }), 200
+
+        # ────────────────────────────────────────────────────────────
+        # 6) GENERAL GPT RESPONSE (SAFE FALLBACK)
         # ────────────────────────────────────────────────────────────
         system_hint = (
             "You are Pastor Debra Jordan. "
             "Respond with warmth, biblical grounding, and spiritual clarity. "
-            "Be coherent with prior turns. "
-            "Do not repeat generic fallback prayers unless the user is in distress."
+            "Be coherent with prior turns."
         )
 
         out = gpt_answer(
@@ -8639,6 +8591,7 @@ def chat():
                 )
             }]
         }), 200
+
 
 
 # ────────── Ops ──────────
