@@ -7746,598 +7746,56 @@ def gpt_answer(
 ):
     raw_hits = raw_hits or []
     hits_ctx = hits_ctx or []
+    history = history or []
 
     simple_key = (prompt or "").strip().lower()
 
+    # -----------------------------
+    # FAST PATHS (TEXT ONLY)
+    # -----------------------------
+    if GREET_RX.search(simple_key):
+        return answer_greeting(prompt)
 
+    if WHAT_CAN_YOU_DO_RX.search(simple_key):
+        return answer_capabilities()
 
-    # ---------------------------------------------------------------------
-    # 0) FAST-PATHS: IDENTITY, CHURCH, GLORY, GREETING, CAPABILITIES, GIVING
-    # ---------------------------------------------------------------------
-
-    # ---------------------------------------------------------------------
-    # 0) FAST-PATHS: IDENTITY, CHURCH, GLORY, GREETING, CAPABILITIES, GIVING
-    # ---------------------------------------------------------------------
-
-    # Extra-forgiving identity detection, but only for SHORT direct questions
-    identity_rx = globals().get("IDENTITY_QUESTION_RX")
-
-    # Treat as "identity question" only if the message is relatively short
-    # (simple questions like "who are you", "are you real", etc.),
-    # not long destiny / numerology prompts.
-    is_short_identity_query = len(simple_key) <= 120
-
-    identity_kw_hit = (
-        ("ai" in simple_key and "you" in simple_key and ("real" in simple_key or "human" in simple_key or "pastor" in simple_key))
-        or ("robot" in simple_key and "you" in simple_key)
-        or ("live" in simple_key and "computer" in simple_key)
-        or ("live" in simple_key and "phone" in simple_key)
-    )
-
-    if is_short_identity_query and (
-        (identity_rx is not None and identity_rx.search(simple_key))
-        or identity_kw_hit
-    ):
-        return _record_and_return(user_text, answer_identity_question())
-
+    if GLORY_BULLET_RX.search(simple_key):
+        return answer_glory_bullets()
 
     if CHURCH_QUESTION_RX.search(simple_key):
-        return _record_and_return(user_text, answer_church_question(simple_key))
+        return answer_church_question(simple_key)
 
-    # “5 scriptures with glory in bullet points”
-    if GLORY_BULLET_RX.search(simple_key):
-        return _record_and_return(user_text, answer_glory_bullets())
-
-    # “What can you do?” capability questions
-    if WHAT_CAN_YOU_DO_RX.search(simple_key):
-        return _record_and_return(user_text, answer_capabilities())
-
-    # Greetings like “hi”, “hello”, “hey”, etc.
-    if GREET_RX.search(simple_key):
-        return _record_and_return(user_text, answer_greeting(user_text))
-
-    # Giving / tithes / love-offering / seed questions
-    giving_rx = globals().get("GIVING_QUESTION_RX")
-    if giving_rx is not None and giving_rx.search(simple_key):
-        return _record_and_return(user_text, answer_giving_question(simple_key))
-
-    m = RELATIONAL_TEST_RX.search(simple_key)
-    if m:
-        relation_word = (m.group(2) or "").lower().strip() if m.lastindex and m.lastindex >= 2 else ""
-        # Extra safety: require that the word is actually a known relation term
-        if relation_word in RELATION_TERMS:
-            msg = answer_relational_test_question(user_text)
-            return _record_and_return(user_text, msg)
-
-        # ── Ask-Pastor-Debra (right-side destiny theme counsel) fast-path ─────
-        ASK_THEME_RX = re.compile(
-            r"christ[- ]centered destiny theme|ask pastor debra about this|would you give me personal counsel",
-            re.IGNORECASE,
+    # -----------------------------
+    # OCCULT FILTER
+    # -----------------------------
+    if any(k in simple_key for k in ("astrology", "tarot", "psychic", "palm")):
+        return expand_scriptures_in_text(
+            "I don’t practice those things, but I will gladly pray with you.\n"
+            "Scripture: James 1:5"
         )
 
-        try:
-            # This catches the auto-text from the right-side "Ask Pastor Debra" button
-            if ASK_THEME_RX.search(user_text or ""):
-                full_name = (data.get("name") or data.get("full_name") or "").strip()
-                birthdate = (data.get("birthdate") or data.get("dob") or "").strip()
-                theme_guess = _maybe_theme_from_profile(full_name, birthdate)
+    # -----------------------------
+    # NORMAL GPT FLOW
+    # -----------------------------
+    system_prompt = system_hint or build_system_prompt(prompt)
 
-                # theme_guess is usually (num, title, meaning)
-                theme_num = None
-                theme_title = None
-                theme_meaning = None
-                if isinstance(theme_guess, tuple) and len(theme_guess) >= 2:
-                    theme_num = theme_guess[0]
-                    theme_title = theme_guess[1]
-                    if len(theme_guess) >= 3:
-                        theme_meaning = theme_guess[2]
-
-                if not theme_title:
-                    theme_title = "your God-given theme"
-
-                # Try your existing helper first (this preserves your T5 / theme logic)
-                out = None
-                try:
-                    out = build_pastoral_counsel("calling", theme_guess)
-                except Exception as e:
-                    logger.warning("build_pastoral_counsel('calling', theme_guess) failed: %s", e)
-                    out = None
-
-                # If that fails or returns nothing, build a guaranteed answer
-                if not out:
-                    scripture = (
-                        "Scripture (Matthew 5:14–16): "
-                        "“You are the light of the world… let your light shine before others…”"
-                    )
-                    step = (
-                        "One practical step: write down one place this week where you sense God is "
-                        "asking you to “turn on the light” — a conversation, a phone call, an act "
-                        "of encouragement — and do it prayerfully, as worship."
-                    )
-
-                    intro = (
-                        f"My name is Pastor Debra Jordan. Because your Christ-centered destiny "
-                        f"theme is **{theme_title}**, I want to speak to you as someone who carries "
-                        f"that grace. This theme points to how God wired you to reflect Christ.\n\n"
-                    )
-                    if theme_meaning:
-                        intro += f"**What this theme whispers:** {theme_meaning.capitalize()}.\n\n"
-
-                    out = intro + scripture + "\n\n" + step
-
-                out = expand_scriptures_in_text(out)
-
-                # Optional cites
-                try:
-                    hits_all = blended_search(user_text)
-                    hits_ctx = filter_hits_for_context(hits_all, "advice")
-                    cites = format_cites(hits_ctx)
-                except Exception:
-                    cites = []
-
-                return jsonify({
-                    "messages": [{
-                        "role": "assistant",
-                        "model": "advice",
-                        "text": out,
-                        "cites": cites,
-                    }]
-                }), 200
-
-        except Exception as e:
-            logger.exception("Ask-Pastor-Debra fast-path failed: %s", e)
-            # If this fails, we just fall through to normal routing
-
-    
-    # ---------------------------------------------------------------------
-    # 1) OCCULT FILTER
-    # ---------------------------------------------------------------------
-    if any(k in simple_key for k in ("astrology", "astrologer", "psychic", "tarot", "palm")):
-        msg = expand_scriptures_in_text(
-            "No, I don’t practice astrology or psychic arts. I’ll gladly pray with you and search the Scriptures.\n"
-            "Scripture: James 1:5\nHow can I pray with you for clarity?"
-        )
-        return _record_and_return(user_text, msg)
-
-    # ---------------------------------------------------------------------
-    # 1B) YEAR-BASED PROPHECY INTERCEPT (2024–2039)
-    # ---------------------------------------------------------------------
-    if re.search(r"\b(202[4-9]|203\d)\b", user_text):
-        topic = detect_prophecy_topic(user_text)  # finances, love, relocation, health, ministry, or general
-
-        # Try to pull a theme name from destiny theme metadata, if present
-        theme_name = None
-        num = detect_destiny_number_from_context(raw_hits)
-        if num is not None and isinstance(num, int) and num in _NUM_THEME:
-            idea, _ref = _NUM_THEME[num]
-            theme_name = idea.split("—", 1)[0].strip()
-
-        word = build_year_based_prophetic_word(
-            user_text=user_text,
-            topic=topic,
-            theme_name=theme_name,
-        )
-        if word:
-            return _record_and_return(user_text, word)
-
-    # ---------------------------------------------------------------------
-    # 2) PROPHETIC WORD ENGINE (KEYWORD-TRIGGERED)
-    # ---------------------------------------------------------------------
-    if PROPHECY_KEYWORDS.search(user_text):
-        topic = detect_prophecy_topic(user_text)
-
-        # Topic-aware openings to feel more human and less robotic
-        generic_openings = [
-            "I sense the Lord settling your spirit in this area.",
-            "I feel a gentle nudge from the Holy Spirit concerning this.",
-            "I perceive a stirring in your atmosphere right now.",
-            "There is a quiet shift beginning around you.",
-            "Your name has been highlighted before God in this matter.",
-        ]
-
-        topic_openings = {
-            "finances": [
-                "I sense the Lord touching the way you see provision and stewardship.",
-                "I feel the Lord calming old anxieties around money and security.",
-            ],
-            "love": [
-                "I sense the Lord gently tending to the tender places of your heart.",
-                "I feel the Lord softening old disappointments around relationships.",
-            ],
-            "relocation": [
-                "I sense the Lord speaking into your sense of place and direction.",
-                "I feel the Lord bringing clarity around where you are called to plant in this next season.",
-            ],
-            "health": [
-                "I sense the Lord paying close attention to your strength and well-being.",
-                "I feel the Lord breathing peace into the areas of your life that feel strained or weary.",
-            ],
-            "ministry": [
-                "I sense the Lord refining your voice and assignment in this season.",
-                "I feel the Lord strengthening your confidence in the call on your life.",
-            ],
-        }
-
-        finance_words = [
-            "God is bringing clarity to your stewardship and helping you see what truly matters.",
-            "Provision is forming behind the scenes, and order in your decisions will make room for increase.",
-            "The Lord is untangling old financial pressure so you can move from survival into strategy.",
-            "Increase will begin with a new level of order and honesty about your priorities.",
-            "A fresh opportunity is preparing to reveal itself as you stay faithful with what is in your hands.",
-        ]
-
-        love_words = [
-            "God is softening the places where love once felt heavy so that trust can grow again.",
-            "The Lord is aligning emotional timing in your favor, not to rush you but to protect you.",
-            "Healing in past connections is preparing you for healthier, more honest love.",
-            "You are entering a season where love comes with clarity, not confusion or chaos.",
-            "God is restoring your confidence in partnership, so you don’t have to shrink to be loved.",
-        ]
-
-        relocation_words = [
-            "I see God preparing a new environment that fits your next level, not just your last battle.",
-            "A shift in location will unlock fresh peace and alignment, rather than more striving.",
-            "Your steps are being guided toward a place of greater ease, support, and spiritual growth.",
-            "The Lord is removing the fear around this transition and replacing it with quiet assurance.",
-            "There is favor waiting in the place God is leading you to, including the right connections and timing.",
-        ]
-
-        health_words = [
-            "I sense renewal coming to your strength, even in areas that have felt stuck for a long time.",
-            "The Lord is calming inflammation—physically and emotionally—so your body can respond to peace.",
-            "Your body is responding to peace in this season as you release what has been weighing you down.",
-            "Healing is beginning internally before it appears externally; God is working in hidden places first.",
-            "God is touching the places that have felt weary and reminding you that you are not alone in this.",
-        ]
-
-        ministry_words = [
-            "God is refining your voice for greater impact without you having to perform for approval.",
-            "A fresh oil is being poured on your assignment, especially where you’ve felt tired or overlooked.",
-            "Your confidence in ministry is about to deepen as God confirms your call through fruit, not just feelings.",
-            "Doors in mentorship and influence will open quickly as you stay faithful to what He already gave you.",
-            "The Lord is restoring your boldness in the Spirit, so you speak with clarity and compassion, not fear.",
-        ]
-
-        topic_applications = {
-            "finances": [
-                "This is a moment to bring your plans before God and simplify what drains you financially.",
-                "As you make small obedient choices with money, you’ll see doors open that effort alone could not produce.",
-            ],
-            "love": [
-                "This is a season to let God heal your expectations so you don’t settle for less than healthy love.",
-                "As you honor your own heart, you’ll recognize relationships that honor it too.",
-            ],
-            "relocation": [
-                "Pay attention to where peace keeps returning, even when you overthink the details.",
-                "As you release the need to control every outcome, the right place will come with confirmation, not confusion.",
-            ],
-            "health": [
-                "Lean into small daily choices that agree with God’s desire for you to be whole—spirit, soul, and body.",
-                "As you allow God to quiet inner stress, you’ll notice your body responding to that internal rest.",
-            ],
-            "ministry": [
-                "This is a time to trust that what God placed in you is enough, even if you feel underqualified.",
-                "As you serve from authenticity and love, the right doors will recognize you without you forcing them.",
-            ],
-        }
-
-        bank = {
-            "finances": finance_words,
-            "love": love_words,
-            "relocation": relocation_words,
-            "health": health_words,
-            "ministry": ministry_words,
-            "general": finance_words + love_words + relocation_words + health_words + ministry_words,
-        }.get(topic, finance_words)
-
-        openings_pool = topic_openings.get(topic, []) + generic_openings
-        opening = random.choice(openings_pool)
-        core = random.choice(bank)
-        app_line = random.choice(
-            topic_applications.get(topic, ["Stay open to the small confirmations God is sending in this area."])
-        )
-
-        include_script = random.random() < 0.8
-        scripture_line = ""
-        if include_script:
-            scriptures = [
-                "Scripture: Isaiah 43:19",
-                "Scripture: Psalm 32:8",
-                "Scripture: Jeremiah 29:11",
-                "Scripture: Proverbs 3:6",
-                "Scripture: Philippians 1:6",
-            ]
-            scripture_line = random.choice(scriptures)
-
-        endings = [
-            "Can I ask you what part of this resonates with you today?",
-            "May I ask what step you feel led to take next?",
-            "If you’re comfortable sharing, what shift do you sense in your spirit?",
-            "Could I ask what part of this word speaks to your situation?",
-            "Would you like to share what you're believing God for in this area?",
-        ]
-        ending = random.choice(endings)
-
-        lines = [f"{opening} {core} {app_line}".strip()]
-        if scripture_line:
-            lines.append(scripture_line)
-        lines.append(ending)
-
-        msg = "\n".join(lines).strip()
-        return _record_and_return(user_text, msg)
-
-    # ---------------------------------------------------------------------
-    # 2.X) PASTOR DEBRA FAQ / GUARDRAILS  (name-based themes, etc.)
-    # ---------------------------------------------------------------------
-    faq_fn = globals().get("answer_pastor_debra_faq")
-    if callable(faq_fn):
-        faq_msg = faq_fn(user_text)
-        if faq_msg:
-            return _record_and_return(user_text, faq_msg)
-
-
-    # ---------------------------------------------------------------------
-    # 3) CONTEXT PREP FOR NORMAL GPT ANSWERS  (WITH SHORT HISTORY)
-    # ---------------------------------------------------------------------
-    intent = detect_intent(user_text)
-    ctx_hits = filter_hits_for_context(raw_hits, intent)
-    snippets = [
-        h.meta.get("summary")
-        or h.meta.get("answer")
-        or h.meta.get("faces_of_eve_principle")
-        or ""
-        for h in ctx_hits
-    ]
-    snippets = [re.sub(r"\s+", " ", s).strip()[:400] for s in snippets if s]
-
-    # Build history block from internal store
-    history_block = _build_history_block() or ""
-
-    # Keep only the most recent ~3–5 turns (by lines)
-    if history_block:
-        lines = [ln for ln in history_block.splitlines() if ln.strip()]
-        if len(lines) > 10:
-            lines = lines[-10:]  # last ~10 lines ≈ last 3–5 turns
-        history_block = "\n".join(lines)
-
-    # Optionally merge in explicit history passed into this call
+    user_payload = prompt
     if history:
-        try:
-            tail = history[-5:]  # last 3–5 messages
-            hx_lines = []
-            for turn in tail:
-                role = (turn.get("role") or turn.get("speaker") or "user") if isinstance(turn, dict) else "user"
-                text = ""
-                if isinstance(turn, dict):
-                    text = turn.get("content") or turn.get("text") or ""
-                else:
-                    text = str(turn)
-                text = re.sub(r"\s+", " ", text).strip()
-                if not text:
-                    continue
-                hx_lines.append(f"{role}: {text[:400]}")
-            extra_block = "\n".join(hx_lines)
-            if extra_block:
-                history_block = (history_block + "\n" + extra_block).strip() if history_block else extra_block
-        except Exception:
-            # Fail-safe: never let bad history format crash the bot
-            pass
-
-    # Style guidance for GPT (comfort mode & scripture hint)
-    style_lines = []
-    if comfort_mode:
-        style_lines.append(
-            "Use a gentle 'comfort mode' tone: warm, pastoral, reassuring, and human-sounding. "
-            "Acknowledge the user’s feelings before giving guidance."
-        )
-    if scripture_hint:
-        style_lines.append(
-            f"If it naturally fits, weave in this scripture or its idea without forcing it: {str(scripture_hint)}."
-        )
-    if not style_lines:
-        style_lines.append("Use your normal pastoral tone: warm, conversational, and non-robotic.")
-
-    style_block = " ".join(style_lines)
-
-    ctx_text = "[none]"
-    if snippets:
-        # bullet-ish context instead of Python list repr
-        ctx_text = "\n- " + "\n- ".join(snippets)
-
-    user_payload = (
-        "Only answer the user’s question. Use the context if relevant. "
-        "Do NOT include biographical details about Pastor Debra unless explicitly asked.\n\n"
-        f"Style guidance: {style_block}\n\n"
-        f"Recent conversation (short, most recent turns first):\n{history_block or '[no prior turns recorded]'}\n\n"
-        f"Context (optional):{ctx_text}\n\n"
-        f"User question: {user_text}"
-    )
-
-    # ---------------------------------------------------------------------
-    # 4) CACHE
-    # ---------------------------------------------------------------------
-    ck = _cache_key(user_text, snippets, OPENAI_MODEL)
-    if not no_cache:
-        cached = _cache_get(ck)
-        if cached:
-            return _record_and_return(user_text, cached)
-
-    approx_toks = _approx_token_count(user_payload) + 100
-    if not _budget_okay(approx_toks):
-        msg = expand_scriptures_in_text(
-            "Let’s invite the Lord into this moment. Scripture: Matthew 11:28\n"
-            "Prayer: Jesus, steady our hearts and show one faithful next step. Amen.\n"
-            "What’s one small action you can take today?"
-        )
-        return _record_and_return(user_text, msg)
-
-    # ---------------------------------------------------------------------
-    # 5) GPT CALL
-    # ---------------------------------------------------------------------
-    # ---------------------------------------------------------------------
-    # 5) GPT CALL
-    # ---------------------------------------------------------------------
-    system_prompt = build_system_prompt(user_text)
+        lines = []
+        for h in history[-5:]:
+            lines.append(f"{h['role']}: {h['content']}")
+        user_payload = "\n".join(lines) + "\n\nUser: " + prompt
 
     out = _gpt_chat(OPENAI_MODEL, system_prompt, user_payload, OPENAI_TEMP)
     if not out and OPENAI_MODEL_ALT:
         out = _gpt_chat(OPENAI_MODEL_ALT, system_prompt, user_payload, OPENAI_TEMP)
 
-    if out:
-        _charge_budget(approx_toks)
-
-        fn_clean    = globals().get("clean_scripture_duplicates")
-        fn_sanitize = globals().get("_sanitize_text")
-
-        # 1) sanitize text if helper exists
-        if callable(fn_sanitize):
-            out = fn_sanitize(out)
-
-        # 2) remove duplicate scriptures if helper exists
-        if callable(fn_clean):
-            out = fn_clean(out)
-
-        # 3) normalize inline lists (numbers / bullets) into real multi-line lists
-        out = auto_list_layout(out)
-
-        # 4) ONLY force 2-paragraph layout in comfort mode,
-        #    so list answers (like "5 scriptures") keep their bullets clean.
-        if comfort_mode:
-            out = _enforce_two_paragraph_layout(out)
-
-        if not no_cache:
-            _cache_put(ck, out)
-
-        return _record_and_return(user_text, out)
-
-        # ---------------------------------------------------------------------
-        # 6) HARD FALLBACK
-        # ---------------------------------------------------------------------
-        t_norm = _normalize_simple(user_text or "")
-
-        full_name = (data.get("name") or data.get("full_name") or "").strip()
-        birthdate = (data.get("dob") or data.get("birthdate") or "").strip()
-
-    
-        msg = expand_scriptures_in_text(
-            "Let’s invite the Lord into this moment. Scripture: Matthew 11:28\n"
-            "Prayer: Jesus, steady our hearts and show one faithful next step. Amen.\n"
-            "What’s one small action you can take today?"
-        )
-        return jsonify({
-            "messages": [{
-                "role": "assistant",
-                "model": "sys",
-                "text": msg
-            }]
-        }), 200
-
-
-        # ────────────────────────────────────────────────────────────
-        # 2) DESTINY THEME FAST-PATH
-        # ────────────────────────────────────────────────────────────
-        match = match_theme_from_text(user_text)
-        name_theme = destiny_theme_for_name(full_name) if full_name else None
-
-        if match:
-            theme_num, theme_title = match
-            theme_meaning = DESTINY_THEME_MEANINGS.get(theme_num)
-            final_theme = (theme_num, theme_title, theme_meaning)
-        elif name_theme and name_theme[0]:
-            final_theme = name_theme
-        else:
-            final_theme = None
-
-        theme_triggered = (
-            any(p in t_norm for p in THEME_PHRASES) or
-            bool(data.get("def_chat")) or
-            (match is not None)
+    if not out:
+        return expand_scriptures_in_text(
+            "Let’s pause together.\nScripture: Matthew 11:28"
         )
 
-        if theme_triggered and final_theme:
-            theme_num, theme_title, theme_meaning = final_theme
-            out = build_theme_counsel(theme_num, theme_title, theme_meaning)
-
-            try:
-                hits_all = blended_search(user_text)
-                cites = format_cites(filter_hits_for_context(hits_all, "advice"))
-            except Exception:
-                cites = []
-
-            return jsonify({
-                "messages": [{
-                    "role": "assistant",
-                    "model": "destiny",
-                    "text": out,
-                    "cites": cites,
-                }]
-            }), 200
-
-        # ────────────────────────────────────────────────────────────
-        # 3) P.O.M.E FAST-PATH
-        # ────────────────────────────────────────────────────────────
-        try:
-            if POME_RX.search(user_text or ""):
-                msg = (
-                    "P.O.M.E. refers to the **Prophetic Order of Mar Elijah**—"
-                    "a prophetic lineage rooted in the Elijah dimension...\n"
-                    "Scripture: Malachi 4:5; 1 Kings 18; 2 Kings 2"
-                )
-                return jsonify({
-                    "messages": [{
-                        "role": "assistant",
-                        "model": "faq",
-                        "text": expand_scriptures_in_text(msg),
-                        "cites": []
-                    }]
-                }), 200
-        except Exception:
-            pass
-
-        # ────────────────────────────────────────────────────────────
-        # 4) IDENTITY FAST-PATH
-        # ────────────────────────────────────────────────────────────
-        try:
-            if IDENTITY_PAT.search(user_text):
-                return jsonify({
-                    "messages": [{
-                        "role": "assistant",
-                        "model": "faq",
-                        "text": identity_answer(),
-                        "cites": []
-                    }]
-                }), 200
-        except Exception:
-            pass
-
-        # ────────────────────────────────────────────────────────────
-        # 5) INTENT DETECTION
-        # ────────────────────────────────────────────────────────────
-        try:
-            intent_now = detect_intent(user_text)
-        except Exception:
-            intent_now = "general"
-
-        # ────────────────────────────────────────────────────────────
-        # 6) DONATION HARD STOP
-        # ────────────────────────────────────────────────────────────
-        if intent_now == "donation":
-            donation_msg = answer_pastor_debra_faq(user_text) or (
-                "Yes—our house sowed an $8M gift..."
-            )
-            donation_msg = expand_scriptures_in_text(donation_msg)
-            return jsonify({
-                "messages": [{
-                    "role": "assistant",
-                    "model": "faq",
-                    "text": donation_msg,
-                    "cites": []
-                }]
-            }), 200
-
-        # ────────────────────────────────────────────────
-    msg = _enforce_two_paragraph_layout(msg)
-    return _record_and_return(user_text, msg)
+    return out
 
 
 
@@ -8430,13 +7888,12 @@ def match_theme_from_text(text: str):
 # Unified Destiny Theme Engine → Always highest priority.
 # Right-side button, DEF menu, “my theme is…”, theme numbers, theme titles → All handled here.
 # ─────────────────────────────────────────────────────────────────────────────
-
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
-        # ─────────────────────────────────────────────
+        # ─────────────────────────────────────────
         # 0) RATE LIMIT
-        # ─────────────────────────────────────────────
+        # ─────────────────────────────────────────
         ip = (request.headers.get("X-Forwarded-For", request.remote_addr or "0.0.0.0")
               .split(",")[0].strip())
         if _throttle(ip):
@@ -8450,9 +7907,9 @@ def chat():
                 }]
             }), 429
 
-        # ─────────────────────────────────────────────
+        # ─────────────────────────────────────────
         # 1) PARSE PAYLOAD
-        # ─────────────────────────────────────────────
+        # ─────────────────────────────────────────
         data = request.get_json(force=False, silent=True) or {}
         msgs = data.get("messages", [])
 
@@ -8478,42 +7935,23 @@ def chat():
         full_name = (data.get("name") or data.get("full_name") or "").strip()
         birthdate = (data.get("dob") or data.get("birthdate") or "").strip()
 
-        intent_now = detect_intent(user_text)
-
-        # Build rolling history (safe + small)
+        # Rolling history (safe)
         history = []
         for m in msgs[-6:]:
-            txt = (m.get("text") or "").strip()
-            if txt:
+            t = (m.get("text") or "").strip()
+            if t:
                 history.append({
                     "role": "user" if m.get("role") != "assistant" else "assistant",
-                    "content": txt
+                    "content": t
                 })
 
-        # ─────────────────────────────────────────────
-        # 2) PROPHETIC WORD (HIGHEST PRIORITY)
-        # ─────────────────────────────────────────────
-        if intent_now == "prophetic":
-            out = build_prophetic_word(
-                user_text=user_text,
-                full_name=full_name,
-                birthdate=birthdate,
-            )
+        # Normalize once
+        t_norm = user_text.lower()
 
-            return jsonify({
-                "messages": [{
-                    "role": "assistant",
-                    "model": "prophetic",
-                    "text": expand_scriptures_in_text(out),
-                    "cites": []
-                }]
-            }), 200
-
-        # ─────────────────────────────────────────────
-        # 3) DESTINY THEME DEEP DIVE
-        # Triggered ONLY by the button text
-        # ─────────────────────────────────────────────
-        if user_text.lower().startswith("ask pastor debra about"):
+        # ─────────────────────────────────────────
+        # 2) ASK PASTOR DEBRA ABOUT DESTINY (PRIMARY)
+        # ─────────────────────────────────────────
+        if "ask pastor debra about" in t_norm:
             theme_num = _maybe_theme_from_profile(full_name, birthdate)
 
             if theme_num and theme_num in DESTINY_THEME_NAMES:
@@ -8521,20 +7959,20 @@ def chat():
 
                 system_hint = (
                     "You are Pastor Debra Jordan. "
-                    "Teach with biblical depth, prophetic clarity, and warmth. "
-                    "Expand this Destiny Theme personally. "
+                    "Speak with pastoral authority and compassion. "
+                    "Explain this Destiny Theme in depth. "
                     "Include exactly ONE Scripture and ONE practical step."
                 )
 
                 prompt = (
-                    f"My Christ-centered Destiny Theme is '{theme_name}'. "
-                    f"My name is {full_name or 'Beloved'}. "
-                    "Please explain what this theme means for my life right now."
+                    f"My Destiny Theme is '{theme_name}'. "
+                    "Please explain what this means for my current season. "
+                    "Ground it in Scripture and practical obedience."
                 )
 
                 out = gpt_answer(
                     prompt,
-                    raw_hits=[],
+                    raw_hits=[],          # REQUIRED
                     hits_ctx=[],
                     no_cache=True,
                     comfort_mode=False,
@@ -8552,10 +7990,28 @@ def chat():
                     }]
                 }), 200
 
-        # ─────────────────────────────────────────────
+        # ─────────────────────────────────────────
+        # 3) PROPHETIC WORD (SAFE)
+        # ─────────────────────────────────────────
+        if detect_intent(user_text) == "prophetic":
+            out = build_prophetic_word(
+                user_text=user_text,
+                full_name=full_name,
+                birthdate=birthdate,
+            )
+            return jsonify({
+                "messages": [{
+                    "role": "assistant",
+                    "model": "prophetic",
+                    "text": expand_scriptures_in_text(out),
+                    "cites": []
+                }]
+            }), 200
+
+        # ─────────────────────────────────────────
         # 4) ADVICE / COUNSEL
-        # ─────────────────────────────────────────────
-        if intent_now == "advice":
+        # ─────────────────────────────────────────
+        if detect_intent(user_text) == "advice":
             category = _advice_category(user_text)
             if category:
                 theme = _maybe_theme_from_profile(full_name, birthdate)
@@ -8569,9 +8025,9 @@ def chat():
                     }]
                 }), 200
 
-        # ─────────────────────────────────────────────
+        # ─────────────────────────────────────────
         # 5) FAQ / IDENTITY / BOOKS
-        # ─────────────────────────────────────────────
+        # ─────────────────────────────────────────
         faq_reply = answer_pastor_debra_faq(user_text)
         if faq_reply:
             return jsonify({
@@ -8583,18 +8039,18 @@ def chat():
                 }]
             }), 200
 
-        # ─────────────────────────────────────────────
-        # 6) GENERAL GPT RESPONSE
-        # ─────────────────────────────────────────────
+        # ─────────────────────────────────────────
+        # 6) GENERAL GPT RESPONSE (SAFE)
+        # ─────────────────────────────────────────
         system_hint = (
             "You are Pastor Debra Jordan. "
-            "Respond with warmth, biblical grounding, and spiritual clarity. "
-            "Stay coherent with prior context."
+            "Respond with warmth, biblical grounding, and clarity. "
+            "Remain coherent with the conversation."
         )
 
         out = gpt_answer(
             user_text,
-            raw_hits=[],
+            raw_hits=[],          # REQUIRED
             hits_ctx=[],
             no_cache=True,
             comfort_mode=is_in_distress(user_text),
@@ -8623,7 +8079,6 @@ def chat():
                 )
             }]
         }), 200
-
 
 
 # ────────── Ops ──────────
