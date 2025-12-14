@@ -8136,10 +8136,13 @@ def gpt_answer(
         "Prayer: Jesus, steady our hearts and show one faithful next step. Amen.\n"
         "What’s one small action you can take today?"
     )
-                    "model": "sys",
-                    "text": "Could you share a bit more? I’m here to listen."
-                }]
-            }), 200
+    return jsonify({
+        "messages": [{
+            "role": "assistant",
+            "model": "sys",
+            "text": msg
+        }]
+    }), 200
 
         # Normalize
         t_norm = _normalize_simple(user_text or "")
