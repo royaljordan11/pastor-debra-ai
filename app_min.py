@@ -8349,20 +8349,16 @@ def match_theme_from_text(text: str):
 # Right-side button, DEF menu, “my theme is…”, theme numbers, theme titles → All handled here.
 # ─────────────────────────────────────────────────────────────────────────────
 
-
+# ────────── Chat ──────────
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
-        # ────────────────────────────────────────────────────────────
-        # 0) RATE LIMIT
-        # ────────────────────────────────────────────────────────────
+        # ── Rate-limit ───────────────────────────────────────────────────────────
         ip = (request.headers.get("X-Forwarded-For", request.remote_addr or "0.0.0.0")
               .split(",")[0].strip())
         if _throttle(ip):
-            msg = (
-                "Please pause for a moment before sending another message.\n"
-                "Scripture: Psalm 46:10"
-            )
+            msg = ("You’re sending messages very quickly. Please pause a moment and try again.\n"
+                   "Scripture: Psalm 46:10")
             return jsonify({
                 "messages": [{
                     "role": "assistant",
@@ -8371,19 +8367,19 @@ def chat():
                 }]
             }), 429
 
-        # ────────────────────────────────────────────────────────────
-        # 1) PARSE PAYLOAD
-        # ────────────────────────────────────────────────────────────
+        # ── Parse payload safely ────────────────────────────────────────────────
         data = request.get_json(force=False, silent=True) or {}
         msgs = data.get("messages", [])
+        active_model = (data.get("active_model") or "auto").strip().lower()
         no_cache = bool(data.get("no_cache"))
 
         if not isinstance(msgs, list):
+            logger.warning("/chat: 'messages' not a list. Got=%r", type(msgs))
             return jsonify({
                 "messages": [{
                     "role": "assistant",
                     "model": "sys",
-                    "text": "Malformed request. Please try again."
+                    "text": "Malformed payload: 'messages' must be a list."
                 }]
             }), 400
 
@@ -8392,145 +8388,393 @@ def chat():
                 "messages": [{
                     "role": "assistant",
                     "model": "sys",
-                    "text": "Welcome. How can I pray with you today?"
+                    "text": "Welcome! How can I pray or help today?"
                 }]
             }), 200
 
-        # ────────────────────────────────────────────────────────────
-        # 2) USER INPUT
-        # ────────────────────────────────────────────────────────────
+        # last user message text
         user_text = (msgs[-1].get("text") or "").strip()[:MAX_INPUT_CHARS]
         if not user_text:
             return jsonify({
                 "messages": [{
                     "role": "assistant",
                     "model": "sys",
-                    "text": "I’m listening. What’s on your heart?"
+                    "text": "Could you share a bit more? I’m here to listen."
                 }]
             }), 200
 
-        t_norm = _normalize_simple(user_text)
-
-        full_name = (data.get("name") or data.get("full_name") or "").strip()
-        birthdate = (data.get("dob") or data.get("birthdate") or "").strip()
-
-        # ────────────────────────────────────────────────────────────
-        # 3) BLOCK ABSTRACT “NAMES”
-        # ────────────────────────────────────────────────────────────
-        ABSTRACT_SUBJECTS = {
-            "my season", "this season", "my life",
-            "my calling", "my purpose", "my destiny"
-        }
-
-        if full_name and full_name.lower().strip() in ABSTRACT_SUBJECTS:
-            full_name = ""
-
-        # ────────────────────────────────────────────────────────────
-        # 4) SUBJECT RESOLUTION (CRITICAL)
-        # ────────────────────────────────────────────────────────────
-        if re.search(r"\b(daughter|son|child)\b", t_norm):
-            subject = "your daughter" if "daughter" in t_norm else "your child"
-        elif re.search(r"\b(cousin|sister|brother|mother|father)\b", t_norm):
-            subject = "your loved one"
-        elif full_name:
-            subject = full_name
-        else:
-            subject = "you"
-
-        # ────────────────────────────────────────────────────────────
-        # 5) FAST FAQ (HOUSE / DONATION / LOGISTICS)
-        # ────────────────────────────────────────────────────────────
+        # ── P.O.M.E. / Prophetic Order of Mar Elijah fast-path ───────────────
         try:
-            faq_reply = answer_pastor_debra_faq(user_text)
-            if faq_reply:
+            if POME_RX.search(user_text or ""):
+                pome_msg = (
+                    "P.O.M.E. refers to the **Prophetic Order of Mar Elijah**—"
+                    "a prophetic lineage and mantle rooted in the Elijah dimension of ministry.\n\n"
+                    "It speaks to:\n"
+                    "• **Prophetic training & formation** – raising a people who hear God clearly and respond in obedience.\n"
+                    "• **Elijah mantle** – boldness, accuracy, and confrontation of false systems, with a spirit of restoration.\n"
+                    "• **Order & alignment** – prophets walking in accountability, character, and spiritual covering, not as spiritual freelancers.\n"
+                    "• **Generational inheritance** – passing the prophetic grace from one generation to the next, as Elijah to Elisha.\n\n"
+                    "At its core, P.O.M.E. is not just a title, but a *formation*—God shaping a prophetic people who carry the "
+                    "Elijah grace to prepare, repair, and restore.\n"
+                    "Scripture: Malachi 4:5; 1 Kings 18; 2 Kings 2\n\n"
+                    "What part of this prophetic order do you feel most drawn to—training, mantle, alignment, or inheritance?"
+                )
                 return jsonify({
                     "messages": [{
                         "role": "assistant",
                         "model": "faq",
-                        "text": expand_scriptures_in_text(faq_reply),
+                        "text": expand_scriptures_in_text(pome_msg),
                         "cites": []
                     }]
                 }), 200
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("POME fast-path error: %s", e)
 
-        # ────────────────────────────────────────────────────────────
-        # 6) ADVICE PATH (ONLY WHEN CLEAR)
-        # ────────────────────────────────────────────────────────────
+        # ── DEF quick menu (explicit) ──────────────────────────────────────────
         try:
-            if detect_intent(user_text) == "advice":
-                category = _advice_category(user_text)
-                if category:
-                    out = build_pastoral_counsel(
-                        category,
-                        _maybe_theme_from_profile(full_name, birthdate)
+            if bool(data.get("def_chat")) or _DEF_TRIGGERS.match(user_text or ""):
+                full_name = (data.get("name") or data.get("full_name") or "").strip()
+                birthdate = (data.get("birthdate") or data.get("dob") or "").strip()
+                k = _def_key(full_name, birthdate)
+                payload = _DEF_CACHE.get(k)
+                if not payload:
+                    payload = build_pastor_def_chat(full_name, birthdate)
+                    _DEF_CACHE[k] = payload
+                return jsonify({
+                    "messages": [{
+                        "role": "assistant",
+                        "model": "def",
+                        "text": payload,
+                        "cites": []
+                    }]
+                }), 200
+        except Exception as e:
+            logger.exception("DEF menu block failed: %s", e)
+
+        # ── Identity fast-path (e.g., “r u pastor debra?”) ─────────────────────
+        try:
+            if IDENTITY_PAT.search(user_text):
+                out = identity_answer()
+                return jsonify({
+                    "messages": [{
+                        "role": "assistant",
+                        "model": "faq",
+                        "text": out,
+                        "cites": []
+                    }]
+                }), 200
+        except Exception as e:
+            logger.warning("Identity fast-path error: %s", e)
+
+        # ── Intent detection ───────────────────────────────────────────────────
+        try:
+            intent_now = detect_intent(user_text)
+        except Exception as e:
+            logger.exception("detect_intent failed: %s", e)
+            intent_now = "general"
+
+        logger.debug("intent=%s | text=%r", intent_now, user_text[:160])
+
+        # ── DONATION: HARD STOP (terminal path) ────────────────────────────────
+        if intent_now == "donation":
+            try:
+                donation_msg = answer_pastor_debra_faq(user_text)  # answers donation first internally
+            except Exception:
+                donation_msg = None
+
+            if not donation_msg:
+                donation_msg = ("Yes—our house sowed an $8M gift as a seed for the future. "
+                                "Education is discipleship of the mind; when you expand what people can learn, "
+                                "you expand what they can become. This investment strengthens scholarship, "
+                                "leadership formation, and technology capacity—including responsible AI literacy—"
+                                "so more minority scholars, pastors, and innovators can serve the Church and the world.\n"
+                                "Scripture: Proverbs 4:7; 2 Timothy 2:15")
+            donation_msg = expand_scriptures_in_text(donation_msg)
+
+            return jsonify({
+                "messages": [{
+                    "role": "assistant",
+                    "model": "faq",
+                    "text": donation_msg,
+                    "cites": []
+                }]
+            }), 200
+
+        # ── Prophetic fast-path (theme-based, for UI “Ask Prophetic” button) ───
+        # Only use this when intent is "prophetic" BUT the user did NOT type
+        # an explicit prophecy request (those are handled later inside gpt_answer).
+        try:
+            if intent_now == "prophetic" and not PROPHECY_KEYWORDS.search(user_text or ""):
+                full_name = (data.get("name") or data.get("full_name") or "").strip()
+                birthdate = (data.get("birthdate") or data.get("dob") or "").strip()
+                theme_guess = _maybe_theme_from_profile(full_name, birthdate)
+
+                out = build_prophetic_word(
+                    full_name=full_name,
+                    birthdate=birthdate,
+                    theme=theme_guess,
+                )
+                out = expand_scriptures_in_text(out)
+
+                # Optional cites for UI
+                try:
+                    hits_all = blended_search(user_text)
+                    hits_ctx = filter_hits_for_context(hits_all, "prophetic")
+                    cites = format_cites(hits_ctx)
+                except Exception:
+                    cites = []
+
+                return jsonify({
+                    "messages": [{
+                        "role": "assistant",
+                        "model": "prophetic",
+                        "text": out,
+                        "cites": cites,
+                    }]
+                }), 200
+        except Exception as e:
+            logger.exception("Prophetic fast-path failed: %s", e)
+            # fall through to normal routing
+
+        # ── Advice fast-path (ONLY when intent is 'advice') ────────────────────
+        def _has_donation_cues(s: str) -> bool:
+            try:
+                t = _normalize_simple(s or "")
+            except Exception:
+                t = (s or "").lower().strip()
+            DONATE = r"(?:donat(?:e|ed)|giv(?:e|en|ing)|gift(?:ed)?|seed(?:ed)?)"
+            EIGHTM = r"(?:8\s*[,\.]?\s*m(?:illion)?|eight\s+million|\$?\s*8[, ]?0{3}[, ]?0{3})"
+            SCHOOL = r"(?:virginia(?:\s*union)?\s*(?:university)?|vuu)"
+            return bool(re.search(DONATE, t, re.I) or re.search(EIGHTM, t, re.I) or re.search(SCHOOL, t, re.I))
+
+        category = None
+        if intent_now == "advice" and not _has_donation_cues(user_text):
+            try:
+                category = _advice_category(user_text)  # "anxiety","marriage","calling","week", etc.
+            except Exception as e:
+                logger.warning("_advice_category failed: %s", e)
+                category = None
+            logger.debug("advice_category=%s", category)
+
+        if category:
+            try:
+                full_name = (data.get("name") or data.get("full_name") or "").strip()
+                birthdate = (data.get("birthdate") or data.get("dob") or "").strip()
+                theme_guess = _maybe_theme_from_profile(full_name, birthdate)
+
+                out = build_pastoral_counsel(category, theme_guess)
+                out = expand_scriptures_in_text(out)
+
+                # Optional cites for UI
+                try:
+                    hits_all = blended_search(user_text)
+                    hits_ctx = filter_hits_for_context(hits_all, "advice")
+                    cites = format_cites(hits_ctx)
+                except Exception:
+                    cites = []
+
+                return jsonify({
+                    "messages": [{
+                        "role": "assistant",
+                        "model": "advice",
+                        "text": out,
+                        "cites": cites
+                    }]
+                }), 200
+            except Exception as e:
+                logger.exception("Advice fast-path failed: %s", e)
+                # continue
+
+        # --- Faces-of-Eve / Books fast-path (JSON-backed) ----------------------
+        try:
+            maybe_faces = answer_faces_of_eve_or_books(user_text)
+            if maybe_faces:
+                try:
+                    hits_all = blended_search(user_text)
+                    hits_ctx = filter_hits_for_context(hits_all, "teachings")
+                    cites = format_cites(hits_ctx)
+                except Exception:
+                    cites = []
+                return jsonify({
+                    "messages": [{
+                        "role": "assistant",
+                        "model": "faq",
+                        "text": maybe_faces,
+                        "cites": cites
+                    }]
+                }), 200
+        except Exception as e:
+            logger.warning("Faces-of-Eve fast-path error: %s", e)
+
+        # ── Destiny claim (“my destiny theme is N”) ────────────────────────────
+        try:
+            claim = _destiny_claim_counsel(user_text)
+            if claim:
+                claim = expand_scriptures_in_text(claim)
+                return jsonify({
+                    "messages": [{
+                        "role": "assistant",
+                        "model": "faq",
+                        "text": claim,
+                        "cites": []
+                    }]
+                }), 200
+        except Exception as e:
+            logger.warning("Destiny-claim handler error: %s", e)
+
+        # ── FAQ / Bio quick answers (includes identity/palm/etc.) ─────────────
+        try:
+            faq_reply = answer_pastor_debra_faq(user_text)
+            if faq_reply:
+                faq_reply = expand_scriptures_in_text(faq_reply)
+                return jsonify({
+                    "messages": [{
+                        "role": "assistant",
+                        "model": "faq",
+                        "text": faq_reply,
+                        "cites": []
+                    }]
+                }), 200
+        except Exception as e:
+            logger.warning("FAQ handler error: %s", e)
+
+        # ── Retrieval + routing ────────────────────────────────────────────────
+        try:
+            hits_all = blended_search(user_text)
+        except Exception as e:
+            logger.exception("blended_search failed: %s", e)
+            hits_all = []
+
+        try:
+            intent = intent_now or "general"
+            hits_ctx = filter_hits_for_context(hits_all, intent)
+            cites = format_cites(hits_ctx)
+        except Exception as e:
+            logger.exception("Context/cites failed: %s", e)
+            hits_ctx, cites = [], []
+
+        # ── NEW: Comfort / scripture-topic detection + short rolling history ───
+        comfort_mode = is_in_distress(user_text)
+
+        topic = None
+        if SHAME_RX.search(user_text) or GUILT_RX.search(user_text):
+            topic = "shame_guilt"
+        elif FEAR_RX.search(user_text):
+            topic = "fear_anxiety"
+        elif OVERWHELM_RX.search(user_text) or HOPELESS_RX.search(user_text):
+            topic = "overwhelm_burden"
+
+        scripture_hint = None
+        if topic:
+            try:
+                last_ref = session.get("last_scripture_ref")
+            except Exception:
+                last_ref = None
+            chosen = pick_scripture(topic, last_ref=last_ref)
+            if chosen:
+                scripture_hint = chosen
+                try:
+                    session["last_scripture_ref"] = chosen["ref"]
+                except Exception:
+                    pass
+
+        # Build short conversation history (last few turns) from msgs
+        recent_history = []
+        try:
+            for m in msgs[-6:]:
+                role = m.get("role") or "user"
+                text = (m.get("text") or "").strip()
+                if text:
+                    # map frontend roles to OpenAI-style roles if needed
+                    if role not in ("user", "assistant", "system"):
+                        role = "user"
+                    recent_history.append({"role": role, "content": text})
+        except Exception as e:
+            logger.warning("Failed to build recent_history: %s", e)
+            recent_history = []
+
+        # ── Model selection ────────────────────────────────────────────────────
+        try:
+            # For explicit prophetic *text* (user typed a prophecy request),
+            # force GPT so gpt_answer()’s prophetic engine is used.
+            if intent_now == "prophetic" and PROPHECY_KEYWORDS.search(user_text or ""):
+                if OPENAI_API_KEY:
+                    model_choice = "gpt"
+                else:
+                    model_choice = "t5" if t5_onnx.ok else "faq_fallback"
+
+            elif active_model in ("t5", "gpt"):
+                if active_model == "gpt" and not OPENAI_API_KEY:
+                    model_choice = "t5" if t5_onnx.ok else "faq_fallback"
+                else:
+                    model_choice = active_model
+
+            else:
+                model_choice = choose_model(user_text, hits_all, t5_onnx.ok)
+        except Exception as e:
+            logger.exception("choose_model failed: %s", e)
+            model_choice = "faq_fallback"
+
+        # ── Generate ───────────────────────────────────────────────────────────
+        try:
+            if model_choice == "t5":
+                prompt = build_t5_prompt(user_text, hits_all)
+                out = t5_onnx.generate(prompt, max_new_tokens=160) if t5_onnx.ok else ""
+                if not out:
+                    # you *could* pass comfort_mode / scripture_hint into gpt_answer here too if desired
+                    out = gpt_answer(
+                        user_text,
+                        hits_all,
+                        no_cache=no_cache,
+                        comfort_mode=comfort_mode,
+                        scripture_hint=scripture_hint,
+                        history=recent_history,
                     )
-                    return jsonify({
-                        "messages": [{
-                            "role": "assistant",
-                            "model": "advice",
-                            "text": expand_scriptures_in_text(out),
-                            "cites": [],
-                        }]
-                    }), 200
-        except Exception:
-            pass
+                out = expand_scriptures_in_text(out)
+                resp = {"role": "assistant", "model": "t5", "text": out, "cites": cites}
 
-        # ────────────────────────────────────────────────────────────
-        # 7) GPT PROPHETIC / PASTORAL RESPONSE (PRIMARY ENGINE)
-        # ────────────────────────────────────────────────────────────
-        recent_history = [
-            {
-                "role": m.get("role", "user"),
-                "content": (m.get("text") or "").strip()
-            }
-            for m in msgs[-6:]
-            if (m.get("text") or "").strip()
-        ]
+            elif model_choice == "gpt":
+                out = gpt_answer(
+                    user_text,
+                    hits_all,
+                    no_cache=no_cache,
+                    comfort_mode=comfort_mode,
+                    scripture_hint=scripture_hint,
+                    history=recent_history,
+                )
+                out = expand_scriptures_in_text(out)
+                resp = {"role": "assistant", "model": "gpt", "text": out, "cites": cites}
 
-        system_hint = (
-            f"The user is asking about {subject}. "
-            "Respond in a prophetic, pastoral voice. "
-            "Do NOT analyze abstract phrases as names. "
-            "If no real name is given, speak directly to the person or season. "
-            "Do not repeat prior phrasing. "
-            "Only use comfort prayers if distress is explicit. "
-            "Be specific, forward-looking, and Spirit-led."
-        )
+            else:
+                # Pastoral safety fallback (coherent, consistent)
+                safe = ("Let’s invite the Lord into this moment. Scripture: Matthew 11:28\n"
+                        "Prayer: Jesus, steady our hearts and show one faithful next step. Amen.\n"
+                        "What’s one small action you can take today?")
+                resp = {"role": "assistant", "model": "fallback",
+                        "text": expand_scriptures_in_text(safe), "cites": cites}
 
-        out = gpt_answer(
-            user_text,
-            hits_ctx=[],
-            no_cache=no_cache,
-            comfort_mode=False,
-            scripture_hint=None,
-            history=recent_history,
-            system_hint=system_hint
-        )
+            return jsonify({"messages": [resp]}), 200
 
-        return jsonify({
-            "messages": [{
-                "role": "assistant",
-                "model": "gpt",
-                "text": expand_scriptures_in_text(out),
-                "cites": [],
-            }]
-        }), 200
+        except Exception as e:
+            logger.exception("Generation block failed: %s", e)
+            safe = ("Let’s invite the Lord into this moment. Scripture: Matthew 11:28\n"
+                    "Prayer: Jesus, steady our hearts and show one faithful next step. Amen.\n"
+                    "What’s one small action you can take today?")
+            return jsonify({
+                "messages": [{
+                    "role": "assistant",
+                    "model": "sys",
+                    "text": expand_scriptures_in_text(safe)
+                }]
+            }), 200
 
     except Exception as e:
-        print("❌ ERROR in /chat:", e)
-        traceback.print_exc()
-
-        safe = (
-            "Let’s pause together for a moment.\n"
-            "Scripture: Matthew 11:28\n"
-            "Prayer: Jesus, steady our hearts. Amen."
-        )
+        logger.exception("Unhandled error in /chat: %s", e)
         return jsonify({
             "messages": [{
                 "role": "assistant",
                 "model": "sys",
-                "text": expand_scriptures_in_text(safe)
+                "text": "Something went wrong. Let’s try again."
             }]
         }), 200
 
