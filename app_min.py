@@ -7708,7 +7708,7 @@ def chat():
         # 2) ASK PASTOR DEBRA — DESTINY THEME (PRIMARY)
         # ────────────────────────────────────────────
 
-        if t_norm.startswith("ask pastor debra"):
+        if "destiny theme" in t_norm:
             theme_num = _maybe_theme_from_profile(full_name, birthdate)
 
             if not theme_num or theme_num not in DESTINY_THEME_NAMES:
