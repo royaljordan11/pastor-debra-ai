@@ -3903,74 +3903,10 @@ def answer_pastor_debra_faq(user_text: str) -> Optional[str]:
     # 3) PROPHETIC WORD FOR SOMEONE'S NAME ("prophetic word for my niece NAME")
     # ---------------------------------------------------------------------
 
-    # We already have t_fixed from above (typo- & niece-normalized)
-    m_word = re.search(
-        r"\b(can\s+you|can\s+u|could\s+you|could\s+u)?\s*(give|release|speak)\s+(?:me\s+)?(?:a\s+)?prophetic\s+word\s+for\s+my\s+"
-        r"(niece|nephew|son|daughter|child|friend|husband|wife)\s+([A-Za-z\s']+)",
-        t_fixed,
-        re.I,
-    )
+    if re.search(r"\bprophetic\s+word\b", t_fixed, re.I):
+        return None  # let main chat pipeline handle it
 
-    rel = None
-    if not m_word:
-        # fallback: "prophetic word for NAME"
-        m_word = re.search(r"\bprophetic\s+word\s+for\s+([A-Za-z\s']+)", t_fixed, re.I)
-        rel = "loved one" if m_word else None
-
-    if m_word:
-        if len(m_word.groups()) == 4:
-            _, _, rel_word, name_raw = m_word.groups()
-            rel = (rel_word or "loved one").lower()
-        else:
-            name_raw = m_word.group(1)
-            rel = rel or "loved one"
-
-        name_clean = " ".join(name_raw.split()).strip()
-
-        # Look up destiny theme number → title → meaning
-        theme_num, theme_title, theme_meaning = destiny_theme_for_name(name_clean)
-
-        # Build the theme line
-        theme_line = ""
-        if theme_title:
-            pronoun = "his" if rel in ["son", "nephew", "husband"] else "her"
-            theme_line = (
-                f"As I look at the name **{name_clean}**, I see a **{theme_title}** grace resting on {pronoun} life"
-            )
-            if theme_meaning:
-                theme_line += f" — a pattern that speaks of {theme_meaning}"
-            theme_line += ".\n\n"
-
-        return say(
-            f"Beloved, yes — I can share an encouraging prophetic word for your {rel}, **{name_clean}**.\n\n"
-            f"{theme_line}"
-            f"Here is my prayerful word:\n\n"
-            f"“{name_clean}, the Lord has written a steady grace into your story. You won’t simply start things — you will finish them "
-            "with compassion and care. There is a tenderness in you that Heaven trusts. In seasons where you feel hidden or overlooked, "
-            "God is shaping resilience and quiet strength in you.\n\n"
-            "The Lord will use your life to bind up what is broken, to bring order where there is chaos, and to release comfort where "
-            "there has been disappointment.”\n\n"
-            "Scripture (Philippians 1:6): “He who began a good work in you will complete it.”\n\n"
-            f"If you’d like, I can pray even more specifically over the season {name_clean} is in."
-        )
-
-
-    # 2B) PROPHETIC WORD — SEASON-BASED (no name)  ✅ ADD HERE
-    # ---------------------------------------------------------------------
-    if re.search(
-        r"\b(prophetic\s+word|word\s+from\s+the\s+lord|speak\s+to\s+my\s+season|for\s+my\s+season)\b",
-        t_fixed,
-        re.I,
-    ):
-        return get_prophetic_word(
-            topic=detect_prophecy_topic(t_raw),
-            theme_name=detect_destiny_theme(t_raw),
-            variability=True
-        )
-
-
-
-
+    
     # -------------------------------
     # 1B) HARD OVERRIDE: Tarot / Astrology / Psychic
 
