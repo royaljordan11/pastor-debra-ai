@@ -741,9 +741,18 @@ qs('#textbox').addEventListener('keydown', e => {
   }
 });
 
-  function askPastorDebra(){
-  sendChat("Ask Pastor Debra about this");
+function askPastorDebra(){
+  const name = qs('#nameInput')?.value || "";
+  const dob  = qs('#dobInput')?.value || "";
+
+  if (!name && !dob) {
+    toast("Please enter your name or DOB first.");
+    return;
+  }
+
+  sendChat("ask pastor debra about my destiny theme");
 }
+
 
 
 
