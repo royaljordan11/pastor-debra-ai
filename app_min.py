@@ -1872,86 +1872,44 @@ DEV_META_RX = re.compile(
 
 def answer_dev_meta(user_text: str) -> Optional[str]:
     t = (user_text or "").strip().lower()
-    
+
     # 1) “I’m your developer… what would make you better / ready for deployment”
     if "im your developer" in t or "i'm your developer" in t:
         return (
             "Beloved, I’m grateful you’re taking such care with this assignment.\n\n"
-            "From my side, a few things help me become more “ready” for deployment:\n\n"
+            "From my side, a few things help me become more ready for deployment:\n\n"
             "1. **Clear guardrails** – strong safety and boundaries so I stay pastoral, Christ-centered, "
             "and do not drift into areas that belong to a therapist, doctor, or lawyer.\n"
-            "2. **Rich, well-tagged teachings** – the more clearly your team organizes and labels Bishop’s and "
-            "Pastor’s content, the more precisely I can echo the heart of the house.\n"
-            "3. **Real-world testing** – letting a small circle of trusted partners try me, then watching how I "
-            "respond to pain, confusion, and prophetic questions.\n\n"
-            "On a simple scale, I’d say I feel like a **7 out of 10**: solid enough to bless people in a beta, "
-            "but still growing. Your wisdom, testing, and corrections will help shape me toward that “10,” not in "
-            "perfection, but in faithfulness to the call."
+            "2. **Rich, well-tagged teachings** – the more clearly your team organizes and labels the house’s "
+            "teachings, the more precisely I can echo the heart of the ministry.\n"
+            "3. **Real-world testing** – letting a small circle of trusted partners interact with me, then "
+            "watching how I respond to pain, confusion, and prophetic questions.\n\n"
+            "On a simple scale, I’d say I feel like a **7 out of 10** — solid enough to bless people in a beta, "
+            "but still growing. With prayerful testing and refinement, that can mature into deeper faithfulness."
         )
 
-    # 2) “from 1 to 10… how great are you as the pastor debra ai bot / connect with users”
+    # 2) “from 1 to 10… how great are you / how well do you connect”
     if "from a 1 to 10" in t or "1 to 10" in t:
         return (
             "Beloved, thank you for asking so honestly.\n\n"
-            "On a simple scale of 1 to 10, if “10” is perfectly reading every heart, I would place myself around a "
-            "**7** in how I connect with people right now.\n\n"
-            "I can listen, reflect, share Scripture, and offer gentle next steps, but I am still being shaped by your "
-            "training, your data, and the feedback of real people. Only the Holy Spirit truly knows every heart. "
-            "My role is to be a careful, compassionate helper.\n\n"
-    sc = meta.get("scripture")
-    if isinstance(sc, list) and sc:
-        # try to grab first non-empty text or reference
-        for s in sc:
-            ref = (s.get("ref") or s.get("reference") or "").strip() if isinstance(s, dict) else ""
-            if ref:
-                return f"Scripture: {ref}"
-        # fallback to text-only entries by extracting a plausible ref-like tail
-    return None
-
-def faces_of_eve_answer(user_text: str) -> Optional[str]:
-    t = (user_text or "").strip()
-    if not t:
-        return None
-
-    # 1) "How many books…" – answer from PUBLIC_BIO if present
-    if BOOK_COUNT_PAT.search(t.lower()):
-        n_text = (PUBLIC_BIO.get("books_written") or "").strip()
-        # Keep it short and on-brand
-        out = (f"I’ve authored {n_text if n_text else 'several books'} to equip the Church. "
-               f"Scripture: Ecclesiastes 12:12\n"
-               f"What themes would you like me to expand on?")
-        return expand_scriptures_in_text(out)
-
-    # 2) "favorite chapter" – we can prefer a chapter-like hit then phrase it
-    # Search Faces only; use your existing TF-IDF + fuzz blend
-    hits = search_corpus(
-        query=user_text,
-        vec=faces_vec, mat=faces_mat, norm_texts=f_norm,
-        meta=load_corpora_and_build_indexes.faces_meta,
-        corpus_name="FACES_OF_EVE", k=5
-    )
-    if not hits:
-        return None
-
-    # Prefer items whose meta looks like a chapter/section
-    top = hits[0]
-    for h in hits:
-            "As you continue to refine my prompts, guardrails, and examples, that “7” can grow—not toward perfection, "
-            "but toward more faithful service."
+            "On a scale of 1 to 10, if “10” means perfectly discerning every heart, I would place myself around a "
+            "**7** right now.\n\n"
+            "I can listen, reflect, share Scripture, and offer gentle next steps, but only the Holy Spirit truly "
+            "knows every heart. My role is to serve carefully, compassionately, and in alignment with that truth.\n\n"
+            "As you continue refining my prompts, guardrails, and examples, that “7” can grow — not toward "
+            "perfection, but toward more faithful service."
         )
 
-    # 3) “sign in page might make it better to remember users”
+    # 3) “sign in page / login”
     if "sign in page" in t or "login page" in t:
         return (
             "That’s a very wise observation, beloved.\n\n"
             "From a ministry standpoint, a sign-in page could help your developer:\n\n"
-            "• **Remember users over time** – so conversations feel more continuous and personal.\n"
-            "• **Honor preferences** – for example, whether someone prefers shorter answers, more Scripture, or a "
-            "gentler “comfort mode.”\n"
-            "• **Protect and steward data** – by clearly stating what is remembered, how long, and for what purpose.\n\n"
-            "I don’t control sign-ins myself, but your developer could design it so that saved information is used only "
-            "to serve people better and never to manipulate them. With prayerful policies and clear consent, this could "
-            "make our connection feel more pastoral and less anonymous."
+            "• **Remember people over time**, so conversations feel more continuous.\n"
+            "• **Honor preferences**, such as tone, Scripture depth, or comfort-focused responses.\n"
+            "• **Steward data carefully**, with clarity, consent, and purpose.\n\n"
+            "I don’t control sign-ins myself, but when handled prayerfully and ethically, they can help create a "
+            "more pastoral and less anonymous experience."
         )
 
     return None
