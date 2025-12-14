@@ -7450,13 +7450,12 @@ def _gpt_answer_impl(
     system_hint=None,
 ):
     raw_hits = raw_hits or []
-    hits_ctx = hits_ctx or []
     history = history or []
 
     simple_key = (prompt or "").strip().lower()
 
     # -----------------------------
-    # FAST PATHS (TEXT ONLY)
+    # FAST TEXT RESPONSES ONLY
     # -----------------------------
     if GREET_RX.search(simple_key):
         return answer_greeting(prompt)
@@ -7470,9 +7469,6 @@ def _gpt_answer_impl(
     if CHURCH_QUESTION_RX.search(simple_key):
         return answer_church_question(simple_key)
 
-    # -----------------------------
-    # OCCULT FILTER
-    # -----------------------------
     if any(k in simple_key for k in ("astrology", "tarot", "psychic", "palm")):
         return expand_scriptures_in_text(
             "I don’t practice those things, but I will gladly pray with you.\n"
@@ -7480,18 +7476,17 @@ def _gpt_answer_impl(
         )
 
     # -----------------------------
-    # NORMAL GPT FLOW
+    # GPT CORE
     # -----------------------------
     system_prompt = system_hint or build_system_prompt(prompt)
 
     user_payload = prompt
     if history:
-        lines = []
-        for h in history[-5:]:
-            lines.append(f"{h['role']}: {h['content']}")
+        lines = [f"{h['role']}: {h['content']}" for h in history[-5:]]
         user_payload = "\n".join(lines) + "\n\nUser: " + prompt
 
     out = _gpt_chat(OPENAI_MODEL, system_prompt, user_payload, OPENAI_TEMP)
+
     if not out and OPENAI_MODEL_ALT:
         out = _gpt_chat(OPENAI_MODEL_ALT, system_prompt, user_payload, OPENAI_TEMP)
 
@@ -7501,6 +7496,9 @@ def _gpt_answer_impl(
         )
 
     return out
+
+
+
 
 
 
@@ -7515,13 +7513,12 @@ def gpt_answer(
     system_hint=None,
 ):
     raw_hits = raw_hits or []
-    hits_ctx = hits_ctx or []
     history = history or []
 
     simple_key = (prompt or "").strip().lower()
 
     # -----------------------------
-    # FAST PATHS (TEXT ONLY)
+    # FAST TEXT RESPONSES ONLY
     # -----------------------------
     if GREET_RX.search(simple_key):
         return answer_greeting(prompt)
@@ -7535,9 +7532,6 @@ def gpt_answer(
     if CHURCH_QUESTION_RX.search(simple_key):
         return answer_church_question(simple_key)
 
-    # -----------------------------
-    # OCCULT FILTER
-    # -----------------------------
     if any(k in simple_key for k in ("astrology", "tarot", "psychic", "palm")):
         return expand_scriptures_in_text(
             "I don’t practice those things, but I will gladly pray with you.\n"
@@ -7545,18 +7539,17 @@ def gpt_answer(
         )
 
     # -----------------------------
-    # NORMAL GPT FLOW
+    # GPT CORE
     # -----------------------------
     system_prompt = system_hint or build_system_prompt(prompt)
 
     user_payload = prompt
     if history:
-        lines = []
-        for h in history[-5:]:
-            lines.append(f"{h['role']}: {h['content']}")
+        lines = [f"{h['role']}: {h['content']}" for h in history[-5:]]
         user_payload = "\n".join(lines) + "\n\nUser: " + prompt
 
     out = _gpt_chat(OPENAI_MODEL, system_prompt, user_payload, OPENAI_TEMP)
+
     if not out and OPENAI_MODEL_ALT:
         out = _gpt_chat(OPENAI_MODEL_ALT, system_prompt, user_payload, OPENAI_TEMP)
 
@@ -7566,6 +7559,7 @@ def gpt_answer(
         )
 
     return out
+
 
 
 
