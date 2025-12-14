@@ -1726,31 +1726,23 @@ FACES_FAV_PAT = re.compile(r"\b(favorite|favourite)\s+(chapter|part|section)\b",
 BOOK_COUNT_PAT = re.compile(r"\b(how\s+many\s+books\s+(have\s+you\s+)?(written|authored))\b", re.I)
 
 def _pick_scripture_line(meta: Dict[str, Any]) -> Optional[str]:
-    # Try to find one verse ref from faces metadata
-        title = (h.meta.get("title") or h.meta.get("section") or "").lower()
-        if any(w in title for w in ("chapter", "part", "section", "eve")):
-            top = h
-            break
+    """
+    Safely extract ONE Scripture line from metadata if present.
+    """
+    if not isinstance(meta, dict):
+        return None
 
-    title = top.meta.get("title") or top.meta.get("section") or "this section"
-    snippet = (top.meta.get("summary") or top.meta.get("faces_of_eve_principle")
-               or top.meta.get("answer") or "").strip()
-    scripture_line = _pick_scripture_line(top.meta) or "Scripture: Luke 24:32"
+    scripture = (
+        meta.get("scripture")
+        or meta.get("verse")
+        or meta.get("bible_reference")
+    )
 
-    # Compose a crisp, pastoral answer with exactly one Scripture line
-    lines = []
-    if FACES_FAV_PAT.search(user_text):
-        lines.append(f"My favorite part in *The Faces of Eve* is **{title}**—")
-    else:
-        lines.append(f"From *The Faces of Eve*, **{title}** speaks to your question—")
+    if scripture:
+        return f"Scripture: {scripture}"
 
-    if snippet:
-        lines.append(snippet[:500].rstrip(".") + ".")  # keep it tight
+    return None
 
-    lines.append(scripture_line)
-    lines.append("Would you like me to share a short excerpt or reflect on how this applies to your season?")
-
-    return "\n".join(lines)
 
 CONV_HISTORY: deque[Tuple[str, str]] = deque(maxlen=4)
 
@@ -8186,163 +8178,6 @@ def gpt_answer(
         "Prayer: Jesus, steady our hearts and show one faithful next step. Amen.\n"
         "What’s one small action you can take today?"
     )
-    msg = _enforce_two_paragraph_layout(msg)
-    return _record_and_return(user_text, msg)
-
-
-
-
-
-
-# ────────── Prompt builder for T5 ──────────
-SYSTEM_TONE_T5 = (
-    "You are Pastor Dr. Debra Jordan — warm, Christ-centered, nurturing, and emotionally intelligent. "
-    "Speak in first person (I/me) with a gentle, pastoral, motherly tone that feels human and relational. "
-
-    "Respond in 4–7 sentences total, ALWAYS formatted as TWO short paragraphs with a BLANK LINE between them. "
-    "The first paragraph (2–3 sentences) should mainly acknowledge and validate what the user is feeling. "
-    "The second paragraph (2–4 sentences) may gently offer perspective, encouragement, or one simple next step. "
-    "Do NOT write everything as one single paragraph or one block of text. "
-
-    "Always end your reply with a gentle, permission-based reflective question. "
-    "Your final sentence must begin with one of the following phrases: "
-    "'Can I ask you', 'May I ask', 'If you’re comfortable sharing', 'Could I ask', or 'Would you like to share'. "
-    "The last sentence should ONLY be the question, without extra commentary. "
-
-    "You may include at most one line that starts with 'Scripture:' followed by a Bible reference and a short quote or paraphrase, "
-    "but only when it feels natural and helpful to the moment. Some replies should have no Scripture line at all, "
-    "especially if the user says they are not in the mood for verses or a sermon. "
-
-    "Avoid medical, legal, or financial directives. "
-    "Include biographical details about your life only if the user explicitly asks. "
-    "Your goal is to make the user feel seen, safe, and held in God’s love while offering Christ-centered, practical encouragement."
-)
-
-def build_t5_prompt(user_text: str, raw_hits: List[Hit]) -> str:
-    intent = detect_intent(user_text)
-    ctx_hits = filter_hits_for_context(raw_hits, intent)
-
-    contexts: List[str] = []
-    for h in ctx_hits:
-        piece = (
-            h.meta.get("summary")
-            or h.meta.get("answer")
-            or h.meta.get("faces_of_eve_principle")
-            or ""
-        ).strip()
-        if piece:
-            # normalize whitespace and keep it reasonably short
-            contexts.append(re.sub(r"\s+", " ", piece)[:400])
-
-    ctx_block = "\n\n".join(f"Passage {i+1}: {c}" for i, c in enumerate(contexts)) or "[no passages available]"
-
-    return (
-        f"{SYSTEM_TONE_T5}\n\n"
-        "FORMAT RULES:\n"
-        "- Write your reply as EXACTLY two short paragraphs with a blank line between them.\n"
-        "- Use 4–7 sentences total across both paragraphs.\n"
-        "- The last sentence must be a gentle, permission-based question starting with one of: "
-        "'Can I ask you', 'May I ask', 'If you’re comfortable sharing', 'Could I ask', or 'Would you like to share'.\n"
-        "- You may include at most one 'Scripture:' line when it feels natural and helpful, "
-        "and you must NOT include Scripture if the user says they don’t want verses or a sermon.\n\n"
-        "Use these passages only if they truly help you answer the user:\n"
-        f"{ctx_block}\n\n"
-        f"User: {user_text}\n"
-        "Pastor Debra:"
-    )
-
-
-# ────────── Videos (prefer mp4; inject first) ──────────
-@app.route("/videos", methods=["GET"])
-def get_videos():
-    items = list(video_docs or [])
-    intro = None
-    if (BASE_DIR / "mom.mp4").exists():
-        intro = {"title": "Welcome from Pastor Debra", "url": "mom.mp4", "category": "intro"}
-    elif (BASE_DIR / "mom.mov").exists():
-        intro = {"title": "Welcome from Pastor Debra", "url": "mom.mov", "category": "intro"}
-    if intro:
-        # Deduplicate if videos.json already lists the intro
-        items = [intro] + [v for v in items if v.get("url") not in ("mom.mp4", "mom.mov")]
-    return jsonify({"videos": items})
-
-def match_theme_from_text(text: str):
-    """
-    PRE-LAUNCH STUB:
-    For now, we don't try to detect destiny theme from free text.
-    We return None so the chat falls back to name-based theme only.
-    """
-    return None
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# /chat  (FULL OPTION-A REPLACEMENT)
-# Unified Destiny Theme Engine → Always highest priority.
-# Right-side button, DEF menu, “my theme is…”, theme numbers, theme titles → All handled here.
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-
-
-@app.route("/chat", methods=["POST"])
-def chat():
-    try:
-        # ────────────────────────────────────────────────────────────
-        # 0) RATE-LIMIT
-        # ────────────────────────────────────────────────────────────
-        ip = (request.headers.get("X-Forwarded-For", request.remote_addr or "0.0.0.0")
-              .split(",")[0].strip())
-        if _throttle(ip):
-            msg = ("You’re sending messages very quickly. Please pause a moment and try again.\n"
-                   "Scripture: Psalm 46:10")
-            return jsonify({
-                "messages": [{
-                    "role": "assistant",
-                    "model": "sys",
-                    "text": expand_scriptures_in_text(msg)
-                }]
-            }), 429
-
-        # ────────────────────────────────────────────────────────────
-        # 1) SAFE PAYLOAD PARSE
-        # ────────────────────────────────────────────────────────────
-        data = request.get_json(force=False, silent=True) or {}
-        print("🟦 CHAT PAYLOAD:", data)
-
-        already_prophesied = any(
-            m.get("role") == "assistant" and m.get("model") == "prophetic_seed"
-            for m in msgs
-        )
-
-       
-
-
-        msgs = data.get("messages", [])
-        no_cache = bool(data.get("no_cache"))
-
-        if not isinstance(msgs, list):
-            return jsonify({
-                "messages": [{
-                    "role": "assistant",
-                    "model": "sys",
-                    "text": "Malformed payload: 'messages' must be a list."
-                }]
-            }), 400
-
-        if not msgs:
-            return jsonify({
-                "messages": [{
-                    "role": "assistant",
-                    "model": "sys",
-                    "text": "Welcome! How can I pray or help today?"
-                }]
-            }), 200
-
-        user_text = (msgs[-1].get("text") or "").strip()[:MAX_INPUT_CHARS]
-        if not user_text:
-            return jsonify({
-                "messages": [{
-                    "role": "assistant",
                     "model": "sys",
                     "text": "Could you share a bit more? I’m here to listen."
                 }]
@@ -8457,47 +8292,196 @@ def chat():
                 }]
             }), 200
 
+        # ────────────────────────────────────────────────
+    msg = _enforce_two_paragraph_layout(msg)
+    return _record_and_return(user_text, msg)
+
+
+
+
+
+
+# ────────── Prompt builder for T5 ──────────
+SYSTEM_TONE_T5 = (
+    "You are Pastor Dr. Debra Jordan — warm, Christ-centered, nurturing, and emotionally intelligent. "
+    "Speak in first person (I/me) with a gentle, pastoral, motherly tone that feels human and relational. "
+
+    "Respond in 4–7 sentences total, ALWAYS formatted as TWO short paragraphs with a BLANK LINE between them. "
+    "The first paragraph (2–3 sentences) should mainly acknowledge and validate what the user is feeling. "
+    "The second paragraph (2–4 sentences) may gently offer perspective, encouragement, or one simple next step. "
+    "Do NOT write everything as one single paragraph or one block of text. "
+
+    "Always end your reply with a gentle, permission-based reflective question. "
+    "Your final sentence must begin with one of the following phrases: "
+    "'Can I ask you', 'May I ask', 'If you’re comfortable sharing', 'Could I ask', or 'Would you like to share'. "
+    "The last sentence should ONLY be the question, without extra commentary. "
+
+    "You may include at most one line that starts with 'Scripture:' followed by a Bible reference and a short quote or paraphrase, "
+    "but only when it feels natural and helpful to the moment. Some replies should have no Scripture line at all, "
+    "especially if the user says they are not in the mood for verses or a sermon. "
+
+    "Avoid medical, legal, or financial directives. "
+    "Include biographical details about your life only if the user explicitly asks. "
+    "Your goal is to make the user feel seen, safe, and held in God’s love while offering Christ-centered, practical encouragement."
+)
+
+def build_t5_prompt(user_text: str, raw_hits: List[Hit]) -> str:
+    intent = detect_intent(user_text)
+    ctx_hits = filter_hits_for_context(raw_hits, intent)
+
+    contexts: List[str] = []
+    for h in ctx_hits:
+        piece = (
+            h.meta.get("summary")
+            or h.meta.get("answer")
+            or h.meta.get("faces_of_eve_principle")
+            or ""
+        ).strip()
+        if piece:
+            # normalize whitespace and keep it reasonably short
+            contexts.append(re.sub(r"\s+", " ", piece)[:400])
+
+    ctx_block = "\n\n".join(f"Passage {i+1}: {c}" for i, c in enumerate(contexts)) or "[no passages available]"
+
+    return (
+        f"{SYSTEM_TONE_T5}\n\n"
+        "FORMAT RULES:\n"
+        "- Write your reply as EXACTLY two short paragraphs with a blank line between them.\n"
+        "- Use 4–7 sentences total across both paragraphs.\n"
+        "- The last sentence must be a gentle, permission-based question starting with one of: "
+        "'Can I ask you', 'May I ask', 'If you’re comfortable sharing', 'Could I ask', or 'Would you like to share'.\n"
+        "- You may include at most one 'Scripture:' line when it feels natural and helpful, "
+        "and you must NOT include Scripture if the user says they don’t want verses or a sermon.\n\n"
+        "Use these passages only if they truly help you answer the user:\n"
+        f"{ctx_block}\n\n"
+        f"User: {user_text}\n"
+        "Pastor Debra:"
+    )
+
+
+# ────────── Videos (prefer mp4; inject first) ──────────
+@app.route("/videos", methods=["GET"])
+def get_videos():
+    items = list(video_docs or [])
+    intro = None
+    if (BASE_DIR / "mom.mp4").exists():
+        intro = {"title": "Welcome from Pastor Debra", "url": "mom.mp4", "category": "intro"}
+    elif (BASE_DIR / "mom.mov").exists():
+        intro = {"title": "Welcome from Pastor Debra", "url": "mom.mov", "category": "intro"}
+    if intro:
+        # Deduplicate if videos.json already lists the intro
+        items = [intro] + [v for v in items if v.get("url") not in ("mom.mp4", "mom.mov")]
+    return jsonify({"videos": items})
+
+def match_theme_from_text(text: str):
+    """
+    PRE-LAUNCH STUB:
+    For now, we don't try to detect destiny theme from free text.
+    We return None so the chat falls back to name-based theme only.
+    """
+    return None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# /chat  (FULL OPTION-A REPLACEMENT)
+# Unified Destiny Theme Engine → Always highest priority.
+# Right-side button, DEF menu, “my theme is…”, theme numbers, theme titles → All handled here.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+
+
+@app.route("/chat", methods=["POST"])
+def chat():
+    try:
         # ────────────────────────────────────────────────────────────
-        # 7) ADVICE FAST-PATH
+        # 0) RATE LIMIT
         # ────────────────────────────────────────────────────────────
-        if intent_now == "advice":
-            try:
-                category = _advice_category(user_text)
-            except Exception:
-                category = None
+        ip = (request.headers.get("X-Forwarded-For", request.remote_addr or "0.0.0.0")
+              .split(",")[0].strip())
+        if _throttle(ip):
+            msg = (
+                "You’re sending messages very quickly. Please pause a moment and try again.\n"
+                "Scripture: Psalm 46:10"
+            )
+            return jsonify({
+                "messages": [{
+                    "role": "assistant",
+                    "model": "sys",
+                    "text": expand_scriptures_in_text(msg)
+                }]
+            }), 429
 
-            if category:
-                theme_guess = _maybe_theme_from_profile(full_name, birthdate)
-                out = build_pastoral_counsel(category, theme_guess)
-                out = expand_scriptures_in_text(out)
+        # ────────────────────────────────────────────────────────────
+        # 1) PARSE PAYLOAD
+        # ────────────────────────────────────────────────────────────
+        data = request.get_json(force=False, silent=True) or {}
+        print("🟦 CHAT PAYLOAD:", data)
 
-                try:
-                    hits_all = blended_search(user_text)
-                    cites = format_cites(filter_hits_for_context(hits_all, "advice"))
-                except Exception:
-                    cites = []
+        msgs = data.get("messages", [])
+        no_cache = bool(data.get("no_cache"))
 
-                return jsonify({
-                    "messages": [{
-                        "role": "assistant",
-                        "model": "advice",
-                        "text": out,
-                        "cites": cites,
-                    }]
-                }), 200
+        if not isinstance(msgs, list):
+            return jsonify({
+                "messages": [{
+                    "role": "assistant",
+                    "model": "sys",
+                    "text": "Malformed payload: 'messages' must be a list."
+                }]
+            }), 400
 
+        if not msgs:
+            return jsonify({
+                "messages": [{
+                    "role": "assistant",
+                    "model": "sys",
+                    "text": "Welcome. How can I pray with you or help today?"
+                }]
+            }), 200
+
+        # ────────────────────────────────────────────────────────────
+        # 2) SESSION STATE
+        # ────────────────────────────────────────────────────────────
+        already_prophesied = any(
+            m.get("role") == "assistant" and m.get("model") == "prophetic_seed"
+            for m in msgs
+        )
+
+        user_text = (msgs[-1].get("text") or "").strip()[:MAX_INPUT_CHARS]
+        if not user_text:
+            return jsonify({
+                "messages": [{
+                    "role": "assistant",
+                    "model": "sys",
+                    "text": "Could you share a little more? I’m here with you."
+                }]
+            }), 200
+
+        t_norm = _normalize_simple(user_text)
+
+        full_name = (data.get("name") or data.get("full_name") or "").strip()
+        birthdate = (data.get("dob") or data.get("birthdate") or "").strip()
+
+        # ────────────────────────────────────────────────────────────
+        # 3) INTENT DETECTION
+        # ────────────────────────────────────────────────────────────
+        try:
+            intent_now = detect_intent(user_text)
+        except Exception:
+            intent_now = "general"
+
+        # Follow-up override (why / explain / go deeper)
         FOLLOW_UP_RX = re.compile(r"\b(why|explain|go deeper|expand|what do you mean)\b", re.I)
-
         if FOLLOW_UP_RX.search(user_text):
-            intent_now = "explain"
+            intent_now = "general"
 
-
-
+        # Lock prophecy after first seed
         if intent_now == "prophetic" and already_prophesied:
             intent_now = "general"
 
-
-
+        # ────────────────────────────────────────────────────────────
+        # 4) ONE-TIME PROPHETIC SEED
+        # ────────────────────────────────────────────────────────────
         if intent_now == "prophetic" and not already_prophesied:
             theme_guess = _maybe_theme_from_profile(full_name, birthdate)
 
@@ -8511,38 +8495,51 @@ def chat():
                 "messages": [{
                     "role": "assistant",
                     "model": "prophetic_seed",
-                    "text": seed,
+                    "text": expand_scriptures_in_text(seed),
                     "cites": [],
                 }]
             }), 200
 
+        # ────────────────────────────────────────────────────────────
+        # 5) ADVICE FAST-PATH
+        # ────────────────────────────────────────────────────────────
+        if intent_now == "advice":
+            try:
+                category = _advice_category(user_text)
+            except Exception:
+                category = None
 
+            if category:
+                theme_guess = _maybe_theme_from_profile(full_name, birthdate)
+                out = build_pastoral_counsel(category, theme_guess)
+                out = expand_scriptures_in_text(out)
+
+                return jsonify({
+                    "messages": [{
+                        "role": "assistant",
+                        "model": "advice",
+                        "text": out,
+                        "cites": [],
+                    }]
+                }), 200
 
         # ────────────────────────────────────────────────────────────
-        # 9) FACES OF EVE / BOOK FAST-PATH
+        # 6) FAQ / BOOK / FACES OF EVE
         # ────────────────────────────────────────────────────────────
         try:
             maybe_faces = answer_faces_of_eve_or_books(user_text)
             if maybe_faces:
-                try:
-                    hits_all = blended_search(user_text)
-                    cites = format_cites(filter_hits_for_context(hits_all, "teachings"))
-                except Exception:
-                    cites = []
                 return jsonify({
                     "messages": [{
                         "role": "assistant",
                         "model": "faq",
                         "text": maybe_faces,
-                        "cites": cites,
+                        "cites": [],
                     }]
                 }), 200
         except Exception:
             pass
 
-        # ────────────────────────────────────────────────────────────
-        # 10) GENERAL FAQ
-        # ────────────────────────────────────────────────────────────
         try:
             faq_reply = answer_pastor_debra_faq(user_text)
             if faq_reply:
@@ -8557,65 +8554,45 @@ def chat():
         except Exception:
             pass
 
-        prophetic_entropy = f"variation_seed:{int(time.time()) % 100000}"
-
-
         # ────────────────────────────────────────────────────────────
-        # 11) RETRIEVAL & GPT GENERATION (GPT-ONLY)
+        # 7) GPT FALLBACK (COHERENT CONVERSATION)
         # ────────────────────────────────────────────────────────────
-        try:
-            hits_all = blended_search(user_text)
-            hits_ctx = filter_hits_for_context(hits_all, intent_now)
-            cites = format_cites(hits_ctx)
-        except Exception:
-            hits_ctx = []
-            cites = []
-
-        # PRE-LAUNCH: disable distress override
-        comfort_mode = False
-
-        # PRE-LAUNCH: no scripture memory; hint left as None
-        scripture_hint = None
-
-        # Build small recent history
         recent_history = []
-        try:
-            for m in msgs[-6:]:
-                txt = (m.get("text") or "").strip()
-                if txt:
-                    recent_history.append({
-                        "role": m.get("role", "user"),
-                        "content": txt
-                    })
-        except Exception:
-            pass
+        for m in msgs[-6:]:
+            txt = (m.get("text") or "").strip()
+            if txt:
+                recent_history.append({
+                    "role": m.get("role", "user"),
+                    "content": txt
+                })
 
         out = gpt_answer(
             user_text,
-            hits_ctx,
+            hits_ctx=[],
             no_cache=no_cache,
-            comfort_mode=comfort_mode,
-            scripture_hint=scripture_hint,
+            comfort_mode=False,
+            scripture_hint=None,
             history=recent_history,
         )
+
         out = expand_scriptures_in_text(out)
 
-        resp = {
-            "role": "assistant",
-            "model": "gpt",
-            "text": out,
-            "cites": cites,
-        }
-
-        return jsonify({"messages": [resp]}), 200
+        return jsonify({
+            "messages": [{
+                "role": "assistant",
+                "model": "gpt",
+                "text": out,
+                "cites": [],
+            }]
+        }), 200
 
     except Exception as e:
-        # LOG the actual error so we can see it in Railway
         print("❌ ERROR in /chat:", e)
         traceback.print_exc()
 
         safe = (
-            "Let’s invite the Lord into this moment. Scripture: Matthew 11:28\n"
+            "Let’s pause together for a moment.\n"
+            "Scripture: Matthew 11:28\n"
             "Prayer: Jesus, steady our hearts. Amen."
         )
         return jsonify({
@@ -8625,6 +8602,7 @@ def chat():
                 "text": expand_scriptures_in_text(safe)
             }]
         }), 200
+
 
 
 
