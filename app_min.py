@@ -1918,6 +1918,37 @@ DEV_FAQ_RX = re.compile(
     re.I,
 )
 
+def is_ask_pastor_about_destiny(text: str) -> bool:
+    t = (text or "").lower()
+    return (
+        "ask pastor debra about this" in t
+        or "tell me more about my destiny theme" in t
+        or "go deeper into my destiny theme" in t
+    )
+
+def build_destiny_deep_dive(theme_num: int, full_name: str = "") -> str:
+    theme_name = DESTINY_THEME_NAMES.get(theme_num)
+    name = _safe_name(full_name) or "Beloved"
+
+    if not theme_name:
+        return (
+            f"{name}, your theme speaks of God’s intentional design. "
+            "Let’s seek clarity together through prayer and Scripture.\n\n"
+            "Scripture: Proverbs 3:5–6"
+        )
+
+    return (
+        f"{name}, your Christ-centered destiny theme is **{theme_name}**.\n\n"
+        f"This theme reflects how God uses your life to serve His Kingdom. "
+        f"It is not about position, but about alignment—walking in obedience, humility, and truth.\n\n"
+        "The Lord is refining discernment in you, strengthening your voice, "
+        "and anchoring you in spiritual responsibility.\n\n"
+        "Scripture: Matthew 5:14–16\n\n"
+        "One step: Ask the Lord daily, *“Where is my light needed today?”* "
+        "Then obey quietly and faithfully."
+    )
+
+
 def answer_pastor_debra_faq(user_text: str) -> Optional[str]:
     t = (user_text or "").strip().lower()
 
@@ -8503,6 +8534,23 @@ def chat():
                     "cites": []
                 }]
             }), 200
+
+        # ────────────────────────────────────────────────────────────
+        # 4.5) DESTINY THEME DEEP DIVE (Ask Pastor Debra about this)
+        # ────────────────────────────────────────────────────────────
+        if is_ask_pastor_about_destiny(user_text):
+            theme_num = _maybe_theme_from_profile(full_name, birthdate)
+            if theme_num:
+                out = build_destiny_deep_dive(theme_num, full_name)
+                return jsonify({
+                    "messages": [{
+                        "role": "assistant",
+                        "model": "destiny",
+                        "text": expand_scriptures_in_text(out),
+                        "cites": []
+                    }]
+                }), 200
+
 
         # ────────────────────────────────────────────────────────────
         # 5) GENERAL GPT RESPONSE (PASTORAL, COHERENT)
