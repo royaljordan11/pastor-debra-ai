@@ -1786,6 +1786,7 @@ def _pick_scripture_line(meta: Dict[str, Any]) -> Optional[str]:
 
     return None
 
+
 CONV_HISTORY: deque[Tuple[str, str]] = deque(maxlen=4)
 
 def _record_and_return(user_text: str, reply: str) -> str:
