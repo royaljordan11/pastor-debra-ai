@@ -1750,17 +1750,30 @@ def build_prophetic_seed(
 ) -> str:
     """
     Deterministic prophetic SEED.
-    Called ONCE per session
+    Called ONCE per session.
+    """
+
+    name = (full_name or "").strip() or "Beloved"
+
+    if theme_guess:
+        _, theme_name, theme_meaning = theme_guess
+        base_sentence = (
+            f"The Lord has placed a {theme_name} grace upon your life — "
+            f"{theme_meaning}."
+        )
     else:
-        intro = f"{name}, I sense this for you: "
+        base_sentence = (
+            "The Lord is shaping your steps with wisdom, timing, and grace."
+        )
+
+    intro = f"{name}, I sense this for you: "
 
     scripture = SCRIPTURE_BY_TOPIC.get(
         topic,
-        "Isaiah 58:11 — “The LORD will guide you continually…”",
+        "Isaiah 58:11 — The LORD will guide you continually"
     )
 
     message = f"{intro}{base_sentence}\n\nScripture: {scripture}"
-
     return message
 
 
