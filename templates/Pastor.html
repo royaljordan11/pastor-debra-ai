@@ -473,10 +473,10 @@
   id="askAboutThemeBtn"
   class="btn"
   type="button"
-  onclick="askPastorDebra()"
 >
   Ask Pastor Debra about this
 </button>
+
 
 
 
@@ -513,6 +513,10 @@
 /* ============================================================
    INTRO LOGIC
 ============================================================ */
+
+let CURRENT_THEME = null;
+let CURRENT_THEME_NAME = null;
+
 const introEl = document.getElementById('intro');
 const introIframe = document.getElementById('introIframe');
 const skipIntro = document.getElementById('skipIntro');
@@ -824,28 +828,56 @@ const destinyMap = {
 function handleCompute(){
   const name = qs('#nameInput').value.trim();
   const dob = qs('#dobInput').value.trim();
-  const notice = qs('#calcNotice');
 
   const themeByDob = dob ? themeFromDob(dob) : null;
   const themeByName = name ? themeFromName(name) : null;
 
   const chosen = themeByDob || themeByName;
-
-  if (!chosen){
-    notice.textContent = "Enter a name or DOB to compute your theme.";
-    qs('#resultCard').style.display = "none";
-    return;
-  }
+  if (!chosen) return;
 
   const entry = destinyMap[chosen];
 
-  qs('#themeBadge').textContent = THEME_NAME[chosen] || "Destiny Theme";
-  qs('#themeOrigin').textContent = themeByDob ? "Derived from your date of birth" : "Derived from your name";
+  CURRENT_THEME = entry.answer;
+  CURRENT_THEME_NAME = THEME_NAME[chosen];
+
+  qs('#themeBadge').textContent = CURRENT_THEME_NAME;
+  qs('#themeOrigin').textContent =
+    themeByDob ? "Derived from your date of birth" : "Derived from your name";
   qs('#themeAnswer').textContent = entry.answer;
+
   qs('#resultCard').style.display = "block";
 }
 
 qs('#calcBtn').addEventListener('click', handleCompute);
+
+const askBtn = qs('#askAboutThemeBtn');
+
+if (askBtn) {
+  askBtn.addEventListener('click', () => {
+    if (!CURRENT_THEME || !CURRENT_THEME_NAME) {
+      toast("Please reveal your Destiny Theme first.");
+      return;
+    }
+
+    const name = qs('#nameInput')?.value || "me";
+
+    const prompt = `
+My name is ${name}.
+My Christ-centered Destiny Theme is "${CURRENT_THEME_NAME}".
+
+Here is the theme description:
+${CURRENT_THEME}
+
+Pastor Debra, would you give me personal counsel with:
+• one Scripture
+• one practical step
+related to this theme?
+`;
+
+    sendChat(prompt.trim());
+  });
+}
+
 
 
 /* ============================================================
