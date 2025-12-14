@@ -1780,8 +1780,14 @@ def _build_history_block() -> str:
     """Format last few turns for GPT as conversational context."""
     if not CONV_HISTORY:
         return ""
-    parts = [].
-    """
+
+    parts = []
+
+    for u, a in CONV_HISTORY:
+        parts.append(f"User: {u}\nPastor Debra: {a}")
+
+    return "\n\n".join(parts)
+
 
     # -----------------------------
     # Normalize theme safely
