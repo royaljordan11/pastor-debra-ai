@@ -1769,7 +1769,7 @@ FACES_FAV_PAT = re.compile(r"\b(favorite|favourite)\s+(chapter|part|section)\b",
 BOOK_COUNT_PAT = re.compile(r"\b(how\s+many\s+books\s+(have\s+you\s+)?(written|authored))\b", re.I)
 
 def _pick_scripture_line(meta: Dict[str, Any]) -> Optional[str]:
-
+    """Safely extract ONE Scripture line from metadata if present."""
     if not isinstance(meta, dict):
         return None
 
