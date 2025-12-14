@@ -9,6 +9,7 @@
 
 <style>
   :root{
+    --header-h: 64px;
     --bg:#0b0f14;
     --panel:#11161c;
     --panel-2:#0f141a;
@@ -267,6 +268,11 @@
     gap: 12px !important;
   }
 
+  .inputbar {
+    padding-bottom: calc(8px + env(safe-area-inset-bottom)) !important;
+  }
+
+
   section.chat,
   aside.panel {
     width: 100% !important;
@@ -277,14 +283,26 @@
      CHAT CONTAINER = FULL VIEWPORT
      (critical for line parity)
   ---------------------------------- */
-  section.chat,
-  .chat {
-    display: flex !important;
-    flex-direction: column !important;
-    height: 100dvh !important;
-    max-height: 100dvh !important;
-    overflow: hidden !important;
-  }
+section.chat,
+.chat {
+  display: flex !important;
+  flex-direction: column !important;
+
+  height: calc(
+    100dvh
+    - var(--header-h)
+    - env(safe-area-inset-bottom)
+  ) !important;
+
+  max-height: calc(
+    100dvh
+    - var(--header-h)
+    - env(safe-area-inset-bottom)
+  ) !important;
+
+  overflow: hidden !important;
+}
+
 
   /* ---------------------------------
      COMPRESS TOP UI (NO REMOVALS)
