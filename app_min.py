@@ -7747,6 +7747,8 @@ def gpt_answer(
     raw_hits = raw_hits or []
     hits_ctx = hits_ctx or []
 
+    simple_key = (prompt or "").strip().lower()
+
 
 
     # ---------------------------------------------------------------------
@@ -8432,9 +8434,9 @@ def match_theme_from_text(text: str):
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
-        # ────────────────────────────────────────────────────────────
+        # ─────────────────────────────────────────────
         # 0) RATE LIMIT
-        # ────────────────────────────────────────────────────────────
+        # ─────────────────────────────────────────────
         ip = (request.headers.get("X-Forwarded-For", request.remote_addr or "0.0.0.0")
               .split(",")[0].strip())
         if _throttle(ip):
@@ -8448,9 +8450,9 @@ def chat():
                 }]
             }), 429
 
-        # ────────────────────────────────────────────────────────────
+        # ─────────────────────────────────────────────
         # 1) PARSE PAYLOAD
-        # ────────────────────────────────────────────────────────────
+        # ─────────────────────────────────────────────
         data = request.get_json(force=False, silent=True) or {}
         msgs = data.get("messages", [])
 
@@ -8476,7 +8478,9 @@ def chat():
         full_name = (data.get("name") or data.get("full_name") or "").strip()
         birthdate = (data.get("dob") or data.get("birthdate") or "").strip()
 
-        # Build short rolling history for GPT coherence
+        intent_now = detect_intent(user_text)
+
+        # Build rolling history (safe + small)
         history = []
         for m in msgs[-6:]:
             txt = (m.get("text") or "").strip()
@@ -8486,15 +8490,16 @@ def chat():
                     "content": txt
                 })
 
-        # ────────────────────────────────────────────────────────────
-        # 2) PROPHETIC WORD — HIGHEST PRIORITY
-        # ────────────────────────────────────────────────────────────
-        if detect_intent(user_text) == "prophetic":
+        # ─────────────────────────────────────────────
+        # 2) PROPHETIC WORD (HIGHEST PRIORITY)
+        # ─────────────────────────────────────────────
+        if intent_now == "prophetic":
             out = build_prophetic_word(
                 user_text=user_text,
                 full_name=full_name,
                 birthdate=birthdate,
             )
+
             return jsonify({
                 "messages": [{
                     "role": "assistant",
@@ -8504,13 +8509,40 @@ def chat():
                 }]
             }), 200
 
-        # ────────────────────────────────────────────────────────────
-        # 3) ASK PASTOR DEBRA ABOUT THIS (DESTINY DEEP DIVE)
-        # ────────────────────────────────────────────────────────────
-        if is_ask_pastor_about_destiny(user_text):
+        # ─────────────────────────────────────────────
+        # 3) DESTINY THEME DEEP DIVE
+        # Triggered ONLY by the button text
+        # ─────────────────────────────────────────────
+        if user_text.lower().startswith("ask pastor debra about"):
             theme_num = _maybe_theme_from_profile(full_name, birthdate)
-            if theme_num:
-                out = build_destiny_deep_dive(theme_num, full_name)
+
+            if theme_num and theme_num in DESTINY_THEME_NAMES:
+                theme_name = DESTINY_THEME_NAMES[theme_num]
+
+                system_hint = (
+                    "You are Pastor Debra Jordan. "
+                    "Teach with biblical depth, prophetic clarity, and warmth. "
+                    "Expand this Destiny Theme personally. "
+                    "Include exactly ONE Scripture and ONE practical step."
+                )
+
+                prompt = (
+                    f"My Christ-centered Destiny Theme is '{theme_name}'. "
+                    f"My name is {full_name or 'Beloved'}. "
+                    "Please explain what this theme means for my life right now."
+                )
+
+                out = gpt_answer(
+                    prompt,
+                    raw_hits=[],
+                    hits_ctx=[],
+                    no_cache=True,
+                    comfort_mode=False,
+                    scripture_hint=None,
+                    history=history,
+                    system_hint=system_hint
+                )
+
                 return jsonify({
                     "messages": [{
                         "role": "assistant",
@@ -8520,10 +8552,10 @@ def chat():
                     }]
                 }), 200
 
-        # ────────────────────────────────────────────────────────────
+        # ─────────────────────────────────────────────
         # 4) ADVICE / COUNSEL
-        # ────────────────────────────────────────────────────────────
-        if detect_intent(user_text) == "advice":
+        # ─────────────────────────────────────────────
+        if intent_now == "advice":
             category = _advice_category(user_text)
             if category:
                 theme = _maybe_theme_from_profile(full_name, birthdate)
@@ -8537,9 +8569,9 @@ def chat():
                     }]
                 }), 200
 
-        # ────────────────────────────────────────────────────────────
+        # ─────────────────────────────────────────────
         # 5) FAQ / IDENTITY / BOOKS
-        # ────────────────────────────────────────────────────────────
+        # ─────────────────────────────────────────────
         faq_reply = answer_pastor_debra_faq(user_text)
         if faq_reply:
             return jsonify({
@@ -8551,13 +8583,13 @@ def chat():
                 }]
             }), 200
 
-        # ────────────────────────────────────────────────────────────
-        # 6) GENERAL GPT RESPONSE (SAFE FALLBACK)
-        # ────────────────────────────────────────────────────────────
+        # ─────────────────────────────────────────────
+        # 6) GENERAL GPT RESPONSE
+        # ─────────────────────────────────────────────
         system_hint = (
             "You are Pastor Debra Jordan. "
             "Respond with warmth, biblical grounding, and spiritual clarity. "
-            "Be coherent with prior turns."
+            "Stay coherent with prior context."
         )
 
         out = gpt_answer(
