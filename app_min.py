@@ -8332,6 +8332,16 @@ def chat():
         data = request.get_json(force=False, silent=True) or {}
         print("🟦 CHAT PAYLOAD:", data)
 
+        already_prophesied = bool(
+            data.get("prophecy_used") or
+            any(
+                m.get("role") == "assistant" and
+                m.get("model") in {"prophetic", "prophetic_seed"}
+                for m in (data.get("messages") or [])
+            )
+        )
+
+
         msgs = data.get("messages", [])
         no_cache = bool(data.get("no_cache"))
 
