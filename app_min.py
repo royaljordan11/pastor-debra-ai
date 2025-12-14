@@ -8392,12 +8392,12 @@ def chat():
                 "messages": [{
                     "role": "assistant",
                     "model": "sys",
-                    "text": "Welcome. How can I pray with you today?"
+                    "text": "Welcome, beloved. How can I pray with you today?"
                 }]
             }), 200
 
         # ────────────────────────────────────────────────────────────
-        # 2) USER INPUT + CONTEXT
+        # 2) USER INPUT
         # ────────────────────────────────────────────────────────────
         user_text = (msgs[-1].get("text") or "").strip()[:MAX_INPUT_CHARS]
         if not user_text:
@@ -8409,27 +8409,55 @@ def chat():
                 }]
             }), 200
 
+        t_norm = _normalize_simple(user_text)
+
         full_name = (data.get("name") or data.get("full_name") or "").strip()
         birthdate = (data.get("dob") or data.get("birthdate") or "").strip()
 
-        # Normalize text
-        t_norm = _normalize_simple(user_text)
+        # ────────────────────────────────────────────────────────────
+        # 3) SANITIZE ABSTRACT “NAMES”
+        # ────────────────────────────────────────────────────────────
+        ABSTRACT_NAME_RX = re.compile(
+            r"\b(my season|this season|my life|my calling|my purpose)\b",
+            re.I
+        )
+        if full_name and ABSTRACT_NAME_RX.search(full_name):
+            full_name = ""
 
         # ────────────────────────────────────────────────────────────
-        # 3) SUBJECT EXTRACTION (VERY IMPORTANT)
+        # 4) SUBJECT EXTRACTION (CRITICAL FIX)
         # ────────────────────────────────────────────────────────────
-        subject = None
-        if re.search(r"\b(daughter|son|child)\b", t_norm):
+        subject = "you"
+
+        if re.search(r"\bdaughter\b", t_norm):
+            subject = "your daughter"
+        elif re.search(r"\bson\b", t_norm):
+            subject = "your son"
+        elif re.search(r"\bchild\b", t_norm):
             subject = "your child"
-        elif re.search(r"\b(cousin|sister|brother|mother|father)\b", t_norm):
-            subject = "your loved one"
+        elif re.search(r"\bcousin\b", t_norm):
+            subject = "your cousin"
+        elif re.search(r"\bsister\b", t_norm):
+            subject = "your sister"
+        elif re.search(r"\bbrother\b", t_norm):
+            subject = "your brother"
         elif full_name:
             subject = full_name
-        else:
-            subject = "you"
 
         # ────────────────────────────────────────────────────────────
-        # 4) FAST FAQ (DONATION / HOUSE QUESTIONS, ETC.)
+        # 5) FORCE PROPHETIC INTENT WHEN ASKED
+        # ────────────────────────────────────────────────────────────
+        PROPHETIC_RX = re.compile(
+            r"\b(prophetic word|prophecy|speak over|pray over|prayer for)\b",
+            re.I
+        )
+
+        intent_now = detect_intent(user_text)
+        if PROPHETIC_RX.search(user_text):
+            intent_now = "prophetic"
+
+        # ────────────────────────────────────────────────────────────
+        # 6) FAST FAQ (HOUSE / DONATION / LOGISTICS)
         # ────────────────────────────────────────────────────────────
         try:
             faq_reply = answer_pastor_debra_faq(user_text)
@@ -8446,9 +8474,9 @@ def chat():
             pass
 
         # ────────────────────────────────────────────────────────────
-        # 5) ADVICE PATH
+        # 7) ADVICE PATH (NON-PROPHETIC)
         # ────────────────────────────────────────────────────────────
-        if detect_intent(user_text) == "advice":
+        if intent_now == "advice":
             try:
                 category = _advice_category(user_text)
                 if category:
@@ -8468,7 +8496,7 @@ def chat():
                 pass
 
         # ────────────────────────────────────────────────────────────
-        # 6) GPT-LED PROPHETIC / PASTORAL RESPONSE (PRIMARY PATH)
+        # 8) GPT-LED PROPHETIC / PASTORAL RESPONSE (PRIMARY)
         # ────────────────────────────────────────────────────────────
         recent_history = []
         for m in msgs[-6:]:
@@ -8479,12 +8507,12 @@ def chat():
                     "content": txt
                 })
 
-        # Inject subject clarity into GPT context
         system_hint = (
             f"The user is asking about {subject}. "
             "Respond in a warm, pastoral, prophetic tone. "
-            "Avoid repeating the same phrasing as earlier replies. "
-            "Stay relational and specific."
+            "Do NOT repeat previous wording. "
+            "Be specific, relational, and forward-looking. "
+            "If a prophetic word is requested, deliver it directly."
         )
 
         out = gpt_answer(
